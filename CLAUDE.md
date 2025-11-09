@@ -97,38 +97,38 @@ zig_game/
 ├── SESSION_STATE.md              # Current progress (READ FIRST)
 ├── CONTEXT_HANDOFF_PROTOCOL.md   # Session handoffs (READ SECOND)
 │
-├── Design Documents/
-│   ├── GAME_DESIGN.md            # Gameplay mechanics and vision
-│   ├── ARCHITECTURE.md           # Technical architecture
-│   ├── DEVELOPMENT_PLAN.md       # Phases, milestones, testing strategy
-│   └── LUA_API_SPEC.md           # Lua scripting API for players
-│
-├── Agent Framework/
-│   ├── AGENT_ORCHESTRATION.md    # How to use agents effectively
-│   └── templates/                # Agent prompt templates
-│       ├── module_agent_template.md
-│       ├── feature_agent_template.md
-│       └── test_agent_template.md
-│
-├── Source Code/
-│   ├── build.zig                 # Build configuration
-│   ├── build.zig.zon             # Dependencies
-│   ├── src/                      # Zig source code
-│   │   ├── main.zig              # Entry point
-│   │   ├── core/                 # Game loop, tick scheduler
-│   │   ├── world/                # Hex grid, world generation
-│   │   ├── entities/             # Entity system
-│   │   ├── scripting/            # Lua integration
-│   │   ├── resources/            # Resource management
-│   │   ├── structures/           # Buildings and construction
-│   │   ├── rendering/            # Graphics
-│   │   ├── input/                # Input handling
-│   │   ├── ui/                   # User interface
-│   │   └── utils/                # Utilities
+├── docs/
+│   ├── design/                   # Design documents
+│   │   ├── GAME_DESIGN.md        # Gameplay mechanics and vision
+│   │   ├── ARCHITECTURE.md       # Technical architecture
+│   │   ├── DEVELOPMENT_PLAN.md   # Phases, milestones, testing strategy
+│   │   └── LUA_API_SPEC.md       # Lua scripting API for players
 │   │
-│   ├── tests/                    # Test files
-│   ├── scripts/                  # Example Lua scripts for players
-│   └── assets/                   # Sprites, textures, etc.
+│   └── agent-framework/          # Agent orchestration framework
+│       ├── AGENT_ORCHESTRATION.md  # How to use agents effectively
+│       └── templates/            # Agent prompt templates
+│           ├── module_agent_template.md
+│           ├── feature_agent_template.md
+│           └── test_agent_template.md
+│
+├── src/                          # Zig source code (Phase 0+)
+│   ├── main.zig                  # Entry point
+│   ├── core/                     # Game loop, tick scheduler
+│   ├── world/                    # Hex grid, world generation
+│   ├── entities/                 # Entity system
+│   ├── scripting/                # Lua integration
+│   ├── resources/                # Resource management
+│   ├── structures/               # Buildings and construction
+│   ├── rendering/                # Graphics
+│   ├── input/                    # Input handling
+│   ├── ui/                       # User interface
+│   └── utils/                    # Utilities
+│
+├── tests/                        # Test files (Phase 0+)
+├── scripts/                      # Example Lua scripts for players (Phase 2+)
+├── assets/                       # Sprites, textures, etc. (Phase 4+)
+├── build.zig                     # Build configuration (Phase 0)
+└── build.zig.zon                 # Dependencies (Phase 0)
 ```
 
 **Key Insight**: If `src/` doesn't exist yet, we're in Phase 0 (setup). Create it according to this structure.
@@ -175,7 +175,7 @@ Camera Control                                    Update World State
 Render (60 FPS) ←────────────────────────── Interpolate Positions
 ```
 
-**See `ARCHITECTURE.md` for detailed system design.**
+**See `docs/design/ARCHITECTURE.md` for detailed system design.**
 
 ---
 
@@ -210,7 +210,7 @@ Performance tests for:
 - Rendering (target: 60 FPS with 5000 visible hexes)
 - Lua script execution (target: 1000 scripts per tick in budget)
 
-**See `DEVELOPMENT_PLAN.md` for detailed testing strategy.**
+**See `docs/design/DEVELOPMENT_PLAN.md` for detailed testing strategy.**
 
 ---
 
@@ -231,11 +231,11 @@ Performance tests for:
 
 ### Agent Types Available
 
-See `AGENT_ORCHESTRATION.md` for complete details. Quick reference:
+See `docs/agent-framework/AGENT_ORCHESTRATION.md` for complete details. Quick reference:
 
 **Development Agents**:
-- **Module Agent**: Implement a single module (`templates/module_agent_template.md`)
-- **Feature Agent**: Implement cross-cutting feature (`templates/feature_agent_template.md`)
+- **Module Agent**: Implement a single module (`docs/agent-framework/templates/module_agent_template.md`)
+- **Feature Agent**: Implement cross-cutting feature (`docs/agent-framework/templates/feature_agent_template.md`)
 - **Refactoring Agent**: Optimize or restructure existing code
 
 **Analysis Agents**:
@@ -243,7 +243,7 @@ See `AGENT_ORCHESTRATION.md` for complete details. Quick reference:
 - **Design Agent**: Research and propose solutions
 
 **QA Agents**:
-- **Test Agent**: Generate comprehensive tests (`templates/test_agent_template.md`)
+- **Test Agent**: Generate comprehensive tests (`docs/agent-framework/templates/test_agent_template.md`)
 - **Review Agent**: Review code for bugs and performance
 
 ### Orchestration Patterns
@@ -255,7 +255,7 @@ See `AGENT_ORCHESTRATION.md` for complete details. Quick reference:
 
 **Map-Reduce**: Multiple agents do similar work → Integration agent combines
 
-**See `AGENT_ORCHESTRATION.md` for detailed patterns and examples.**
+**See `docs/agent-framework/AGENT_ORCHESTRATION.md` for detailed patterns and examples.**
 
 ---
 
@@ -263,20 +263,20 @@ See `AGENT_ORCHESTRATION.md` for complete details. Quick reference:
 
 ### Adding a New Module
 
-1. Check `ARCHITECTURE.md` for module specification
+1. Check `docs/design/ARCHITECTURE.md` for module specification
 2. Define API contract (interface with function signatures)
 3. Use module agent template:
    ```
    Task(subagent_type="general-purpose",
         description="Implement {module_name} module",
-        prompt="[Use templates/module_agent_template.md]")
+        prompt="[Use docs/agent-framework/templates/module_agent_template.md]")
    ```
 4. Write tests (or use test agent)
 5. Integrate with dependent modules
 
 ### Implementing a Feature
 
-1. Check `GAME_DESIGN.md` and `DEVELOPMENT_PLAN.md` for feature spec
+1. Check `docs/design/GAME_DESIGN.md` and `docs/design/DEVELOPMENT_PLAN.md` for feature spec
 2. Identify affected modules
 3. Use feature agent template
 4. Write integration tests demonstrating workflow
@@ -284,7 +284,7 @@ See `AGENT_ORCHESTRATION.md` for complete details. Quick reference:
 
 ### Adding Lua API Function
 
-1. Check `LUA_API_SPEC.md` for API design
+1. Check `docs/design/LUA_API_SPEC.md` for API design
 2. Implement C binding in `src/scripting/api.zig`
 3. Register function with Lua VM
 4. Test from Lua (create test script)
@@ -394,11 +394,11 @@ These are locked in. Don't revisit unless compelling reason:
 ### Project Documentation
 - [SESSION_STATE.md](SESSION_STATE.md) - **READ FIRST**
 - [CONTEXT_HANDOFF_PROTOCOL.md](CONTEXT_HANDOFF_PROTOCOL.md) - **READ SECOND**
-- [GAME_DESIGN.md](GAME_DESIGN.md) - Gameplay mechanics
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical design
-- [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) - Phases and milestones
-- [LUA_API_SPEC.md](LUA_API_SPEC.md) - Lua API reference
-- [AGENT_ORCHESTRATION.md](AGENT_ORCHESTRATION.md) - How to use agents
+- [docs/design/GAME_DESIGN.md](docs/design/GAME_DESIGN.md) - Gameplay mechanics
+- [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md) - Technical design
+- [docs/design/DEVELOPMENT_PLAN.md](docs/design/DEVELOPMENT_PLAN.md) - Phases and milestones
+- [docs/design/LUA_API_SPEC.md](docs/design/LUA_API_SPEC.md) - Lua API reference
+- [docs/agent-framework/AGENT_ORCHESTRATION.md](docs/agent-framework/AGENT_ORCHESTRATION.md) - How to use agents
 
 ### External Resources
 - **Zig**: https://ziglang.org/documentation/master/
@@ -408,9 +408,9 @@ These are locked in. Don't revisit unless compelling reason:
 - **Screeps** (inspiration): https://screeps.com/
 
 ### Templates
-- `templates/module_agent_template.md` - For implementing modules
-- `templates/feature_agent_template.md` - For cross-cutting features
-- `templates/test_agent_template.md` - For generating tests
+- `docs/agent-framework/templates/module_agent_template.md` - For implementing modules
+- `docs/agent-framework/templates/feature_agent_template.md` - For cross-cutting features
+- `docs/agent-framework/templates/test_agent_template.md` - For generating tests
 
 ---
 
@@ -426,8 +426,8 @@ These are locked in. Don't revisit unless compelling reason:
 → Try `rm -rf zig-cache zig-out && zig build`
 
 ### "I don't understand the architecture"
-→ Read `ARCHITECTURE.md` for technical design
-→ Read `GAME_DESIGN.md` for gameplay context
+→ Read `docs/design/ARCHITECTURE.md` for technical design
+→ Read `docs/design/GAME_DESIGN.md` for gameplay context
 → Use Explore agent to understand existing code
 
 ### "Tests are failing"
@@ -438,7 +438,7 @@ These are locked in. Don't revisit unless compelling reason:
 ### "Should I create an agent for this?"
 → Is it >100 LOC or >3 files? Yes, use agent.
 → Is it simple edit? No, do it directly.
-→ See `AGENT_ORCHESTRATION.md` for detailed guidance.
+→ See `docs/agent-framework/AGENT_ORCHESTRATION.md` for detailed guidance.
 
 ### "Context is too large, can't read everything"
 → **Don't read everything.** Use layered approach:
