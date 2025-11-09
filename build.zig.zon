@@ -5,8 +5,10 @@
     .minimum_zig_version = "0.15.1",
 
     .dependencies = .{
-        // Dependencies will be added here
-        // ziglua and raylib-zig to be added after initial build verification
+        .raylib_zig = .{
+            .url = "git+https://github.com/raylib-zig/raylib-zig?ref=devel#3cd4d3179d967fc8b931514603fdbc4a43a1d771",
+            .hash = "raylib_zig-5.6.0-dev-KE8REE1LBQCL7lia-DwUkusWI1G4kJmhtatLh2kNsuiE",
+        },
     },
 
     .paths = .{
