@@ -59,7 +59,9 @@ pub fn main() !void {
         }
 
         // Keyboard camera controls
-        const pan_speed = 5.0;
+        // Scale by delta time for frame-rate independence and by zoom for consistent screen-space movement
+        const base_speed = 400.0; // pixels per second at zoom 1.0
+        const pan_speed = base_speed * rl.getFrameTime() * renderer.camera.zoom;
         if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
             renderer.camera.pan(-pan_speed, 0);
         }
