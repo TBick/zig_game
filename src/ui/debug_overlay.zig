@@ -7,6 +7,7 @@ pub const DebugOverlay = struct {
     frame_times: [60]f32, // Rolling buffer for frame times
     frame_index: usize,
     last_update_time: f64,
+    frame_count: u64, // Total frames processed
 
     pub fn init() DebugOverlay {
         return DebugOverlay{
@@ -14,6 +15,7 @@ pub const DebugOverlay = struct {
             .frame_times = [_]f32{0.0} ** 60,
             .frame_index = 0,
             .last_update_time = 0.0,
+            .frame_count = 0,
         };
     }
 
@@ -30,8 +32,18 @@ pub const DebugOverlay = struct {
         const frame_time = rl.getFrameTime();
         self.frame_times[self.frame_index] = frame_time * 1000.0; // Convert to ms
         self.frame_index = (self.frame_index + 1) % self.frame_times.len;
+        self.frame_count += 1;
 
         self.last_update_time = rl.getTime();
+
+        // Debug output every 60 frames
+        if (self.frame_count % 60 == 0) {
+            std.debug.print("Debug overlay frame {d}: FPS={d}, frame_time={d:.2}ms\n", .{
+                self.frame_count,
+                rl.getFPS(),
+                frame_time * 1000.0,
+            });
+        }
     }
 
     /// Draw the overlay (call during rendering)
