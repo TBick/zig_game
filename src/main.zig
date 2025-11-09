@@ -8,20 +8,25 @@ pub fn main() !void {
     // Enable VSync before window initialization to prevent screen tearing
     rl.setConfigFlags(rl.ConfigFlags{ .vsync_hint = true });
 
-    // Get monitor dimensions for fullscreen
+    // Initialize window at a default size first
+    rl.initWindow(800, 600, "Zig Game - Hex Grid Prototype");
+    defer rl.closeWindow();
+
+    // NOW get monitor dimensions and toggle fullscreen
     const monitor = rl.getCurrentMonitor();
     const screen_width = rl.getMonitorWidth(monitor);
     const screen_height = rl.getMonitorHeight(monitor);
 
-    // Initialize window at monitor resolution
-    rl.initWindow(screen_width, screen_height, "Zig Game - Hex Grid Prototype");
-    defer rl.closeWindow();
-
-    // Toggle to borderless fullscreen mode
     rl.toggleBorderlessWindowed();
 
     // Set target FPS (VSync will override this to match monitor refresh rate)
     rl.setTargetFPS(60);
+
+    // DEBUG: Print window info
+    std.debug.print("Monitor: {}, size: {}x{}, refresh: {}Hz\n", .{
+        monitor, screen_width, screen_height, rl.getMonitorRefreshRate(monitor)
+    });
+    std.debug.print("Window size after fullscreen: {}x{}\n", .{rl.getScreenWidth(), rl.getScreenHeight()});
 
     // Initialize hex grid
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -65,8 +70,12 @@ pub fn main() !void {
         // Keyboard camera controls
         // Scale by delta time for frame-rate independence
         const base_speed = 400.0; // pixels per second
-        const pan_speed = base_speed * rl.getFrameTime();
+        const frame_time = rl.getFrameTime();
+        const pan_speed = base_speed * frame_time;
+
+        // DEBUG: Print pan_speed when a key is pressed
         if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
+            std.debug.print("Pan LEFT: frame_time={d:.6}, pan_speed={d:.2}\n", .{frame_time, pan_speed});
             renderer.camera.pan(-pan_speed, 0);
         }
         if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
@@ -108,15 +117,19 @@ pub fn main() !void {
 
         rl.clearBackground(rl.Color.init(30, 30, 40, 255));
 
+        // Get current window dimensions (in case of resize)
+        const current_width = rl.getScreenWidth();
+        const current_height = rl.getScreenHeight();
+
         // Draw hex grid
-        renderer.drawGrid(&grid, screen_width, screen_height);
+        renderer.drawGrid(&grid, current_width, current_height);
 
         // Draw UI
         rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 180, 20, rl.Color.ray_white);
         rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 210, 14, rl.Color.light_gray);
 
         // Draw camera info
-        const cam_y = screen_height - 60;
+        const cam_y = current_height - 60;
         var buf: [100:0]u8 = undefined;
         const info = std.fmt.bufPrintZ(&buf, "Camera: ({d:.0}, {d:.0}) Zoom: {d:.2}x", .{
             renderer.camera.x,
