@@ -2,15 +2,19 @@ const std = @import("std");
 const rl = @import("raylib");
 const HexGrid = @import("world/hex_grid.zig").HexGrid;
 const HexRenderer = @import("rendering/hex_renderer.zig").HexRenderer;
+const DebugOverlay = @import("ui/debug_overlay.zig").DebugOverlay;
 
 pub fn main() !void {
-    // Window configuration
-    const screen_width = 800;
-    const screen_height = 600;
+    // Window configuration - fullscreen borderless
+    const screen_width = rl.getScreenWidth();
+    const screen_height = rl.getScreenHeight();
 
     // Initialize window
     rl.initWindow(screen_width, screen_height, "Zig Game - Hex Grid Prototype");
     defer rl.closeWindow();
+
+    // Toggle fullscreen for borderless fullscreen
+    rl.toggleBorderlessWindowed();
 
     // Set target FPS
     rl.setTargetFPS(60);
@@ -28,6 +32,9 @@ pub fn main() !void {
 
     // Initialize renderer
     var renderer = HexRenderer.init(30.0); // 30 pixel hex size
+
+    // Initialize debug overlay
+    var debug_overlay = DebugOverlay.init();
 
     // Camera controls
     var last_mouse_pos = rl.getMousePosition();
@@ -79,6 +86,14 @@ pub fn main() !void {
             renderer.camera = @import("rendering/hex_renderer.zig").Camera.init();
         }
 
+        // Toggle debug overlay with F3
+        if (rl.isKeyPressed(rl.KeyboardKey.f3)) {
+            debug_overlay.toggle();
+        }
+
+        // Update debug overlay
+        debug_overlay.update();
+
         last_mouse_pos = mouse_pos;
 
         // Draw
@@ -91,22 +106,26 @@ pub fn main() !void {
         renderer.drawGrid(&grid, screen_width, screen_height);
 
         // Draw UI
-        rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 10, 20, rl.Color.ray_white);
-        rl.drawText("WASD/Arrows: Pan  |  Mouse Wheel/+/-: Zoom  |  R: Reset  |  ESC: Exit", 10, 40, 14, rl.Color.light_gray);
+        rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 180, 20, rl.Color.ray_white);
+        rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 210, 14, rl.Color.light_gray);
 
         // Draw camera info
+        const cam_y = screen_height - 60;
         var buf: [100:0]u8 = undefined;
         const info = std.fmt.bufPrintZ(&buf, "Camera: ({d:.0}, {d:.0}) Zoom: {d:.2}x", .{
             renderer.camera.x,
             renderer.camera.y,
             renderer.camera.zoom,
         }) catch "Error";
-        rl.drawText(info, 10, screen_height - 30, 14, rl.Color.green);
+        rl.drawText(info, 10, cam_y, 14, rl.Color.green);
 
         // Draw tile count
         var buf2: [100:0]u8 = undefined;
         const count_text = std.fmt.bufPrintZ(&buf2, "Tiles: {d}", .{grid.count()}) catch "Error";
-        rl.drawText(count_text, 10, screen_height - 50, 14, rl.Color.green);
+        rl.drawText(count_text, 10, cam_y + 20, 14, rl.Color.green);
+
+        // Draw debug overlay (uses entity count = tile count for now, tick_rate = null)
+        debug_overlay.draw(grid.count(), null);
     }
 }
 

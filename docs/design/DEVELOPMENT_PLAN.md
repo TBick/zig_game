@@ -84,11 +84,11 @@ This document outlines the phased development approach, milestones, testing stra
 ### Tasks
 
 #### Hex Grid System (`src/world/`)
-- [ ] Implement `HexCoord` type with axial coordinates
-- [ ] Implement hex math functions (distance, neighbors, range)
-- [ ] Create `HexGrid` structure with tile storage
-- [ ] Implement hex-to-pixel and pixel-to-hex conversion
-- [ ] Write comprehensive hex math tests
+- [x] Implement `HexCoord` type with axial coordinates
+- [x] Implement hex math functions (distance, neighbors, range)
+- [x] Create `HexGrid` structure with tile storage
+- [x] Implement hex-to-pixel and pixel-to-hex conversion
+- [x] Write comprehensive hex math tests
 
 #### Entity System (`src/entities/`)
 - [ ] Define `Entity` structure
@@ -105,12 +105,25 @@ This document outlines the phased development approach, milestones, testing stra
 - [ ] Test tick timing accuracy
 
 #### Rendering (`src/rendering/`)
-- [ ] Choose and integrate rendering library (Raylib recommended)
-- [ ] Implement window creation and basic event loop
-- [ ] Create hex tile renderer (colored hexes)
-- [ ] Implement camera with pan/zoom
+- [x] Choose and integrate rendering library (Raylib recommended)
+- [x] Implement window creation and basic event loop
+- [x] Create hex tile renderer (colored hexes)
+- [x] Implement camera with pan/zoom
 - [ ] Render entity markers (circles/squares)
 - [ ] Test rendering performance (10,000+ hexes)
+
+#### Debug Overlay (`src/ui/debug_overlay.zig`)
+- [ ] Implement FPS counter and frame time display
+- [ ] Add entity count display
+- [ ] Add tick rate display (when tick system exists)
+- [ ] Show memory usage
+- [ ] Toggle overlay with F3 key
+- [ ] Display in non-intrusive corner position
+
+#### Window Configuration
+- [ ] Implement fullscreen borderless window
+- [ ] ESC to exit fullscreen
+- [ ] Future: Configurable in settings (Phase 4)
 
 ### Deliverables
 - Runnable application displaying hex grid
@@ -319,7 +332,7 @@ This document outlines the phased development approach, milestones, testing stra
 - [ ] Resource panel (global resource counts)
 - [ ] Tech tree panel (unlocks, progress)
 - [ ] Console/log panel (script output, errors)
-- [ ] Performance panel (FPS, tick time, script CPU)
+- [ ] Performance panel (detailed profiling, graphs) - extends Phase 1 debug overlay
 
 #### Interaction System (`src/input/`)
 - [ ] Implement entity selection (click, drag-select)

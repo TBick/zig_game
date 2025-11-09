@@ -256,6 +256,26 @@ pub const ScriptSandbox = struct {
 
 **Recommendation**: Start with Raylib for prototype, evaluate performance
 
+**Window Configuration**:
+- Fullscreen borderless by default (uses full monitor resolution)
+- ESC key exits fullscreen and closes window
+- Future: Configurable window mode in settings (Phase 4)
+  - Windowed mode with custom resolution
+  - Fullscreen exclusive vs borderless
+  - Multi-monitor support
+
+**Debug Overlay** (Phase 1 development tool):
+- Toggle with F3 key
+- Displays real-time performance metrics:
+  - FPS (frames per second)
+  - Frame time (milliseconds)
+  - Entity count
+  - Tick rate (when tick system implemented)
+  - Memory usage
+- Non-intrusive corner display
+- Always available in debug builds
+- Extends to detailed Performance Panel in Phase 4
+
 ### 6. Input System
 
 **Architecture**:
