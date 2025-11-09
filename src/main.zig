@@ -5,18 +5,19 @@ const HexRenderer = @import("rendering/hex_renderer.zig").HexRenderer;
 const DebugOverlay = @import("ui/debug_overlay.zig").DebugOverlay;
 
 pub fn main() !void {
-    // Window configuration - fullscreen borderless
-    const screen_width = rl.getScreenWidth();
-    const screen_height = rl.getScreenHeight();
-
     // Enable VSync before window initialization to prevent screen tearing
     rl.setConfigFlags(rl.ConfigFlags{ .vsync_hint = true });
 
-    // Initialize window
+    // Get monitor dimensions for fullscreen
+    const monitor = rl.getCurrentMonitor();
+    const screen_width = rl.getMonitorWidth(monitor);
+    const screen_height = rl.getMonitorHeight(monitor);
+
+    // Initialize window at monitor resolution
     rl.initWindow(screen_width, screen_height, "Zig Game - Hex Grid Prototype");
     defer rl.closeWindow();
 
-    // Toggle fullscreen for borderless fullscreen
+    // Toggle to borderless fullscreen mode
     rl.toggleBorderlessWindowed();
 
     // Set target FPS (VSync will override this to match monitor refresh rate)
