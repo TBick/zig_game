@@ -9,6 +9,9 @@ pub fn main() !void {
     const screen_width = rl.getScreenWidth();
     const screen_height = rl.getScreenHeight();
 
+    // Enable VSync before window initialization to prevent screen tearing
+    rl.setConfigFlags(rl.ConfigFlags{ .vsync_hint = true });
+
     // Initialize window
     rl.initWindow(screen_width, screen_height, "Zig Game - Hex Grid Prototype");
     defer rl.closeWindow();
@@ -16,7 +19,7 @@ pub fn main() !void {
     // Toggle fullscreen for borderless fullscreen
     rl.toggleBorderlessWindowed();
 
-    // Set target FPS
+    // Set target FPS (VSync will override this to match monitor refresh rate)
     rl.setTargetFPS(60);
 
     // Initialize hex grid
