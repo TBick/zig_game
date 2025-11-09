@@ -26,7 +26,15 @@ pub const DebugOverlay = struct {
 
     /// Update overlay state (call once per frame)
     pub fn update(self: *DebugOverlay) void {
-        if (!self.enabled) return;
+        // DEBUG: Always print to verify this function is called
+        if (self.frame_count == 0) {
+            std.debug.print("DEBUG: update() called for first time, enabled={}\n", .{self.enabled});
+        }
+
+        if (!self.enabled) {
+            std.debug.print("DEBUG: update() called but overlay is disabled (frame {})\n", .{self.frame_count});
+            return;
+        }
 
         // Record frame time
         const frame_time = rl.getFrameTime();
@@ -38,10 +46,11 @@ pub const DebugOverlay = struct {
 
         // Debug output every 60 frames
         if (self.frame_count % 60 == 0) {
-            std.debug.print("Debug overlay frame {d}: FPS={d}, frame_time={d:.2}ms\n", .{
+            std.debug.print("DEBUG: Frame {d}: FPS={d}, frame_time={d:.2}ms, avg={d:.2}ms\n", .{
                 self.frame_count,
                 rl.getFPS(),
                 frame_time * 1000.0,
+                self.getAverageFrameTime(),
             });
         }
     }
