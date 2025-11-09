@@ -1,0 +1,21 @@
+.{
+    .name = .zig_game,
+    .version = "0.1.0",
+    .fingerprint = 0xeb41d26f48f688e4, // Generated for this project
+    .minimum_zig_version = "0.15.1",
+
+    .dependencies = .{
+        // Dependencies will be added here
+        // ziglua and raylib-zig to be added after initial build verification
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "tests",
+        "scripts",
+        "assets",
+        "README.md",
+    },
+}
