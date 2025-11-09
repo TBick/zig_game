@@ -12,11 +12,13 @@ pub fn main() !void {
     rl.initWindow(800, 600, "Zig Game - Hex Grid Prototype");
     defer rl.closeWindow();
 
-    // NOW get monitor dimensions and toggle fullscreen
+    // NOW get monitor dimensions and set window to fullscreen size
     const monitor = rl.getCurrentMonitor();
     const screen_width = rl.getMonitorWidth(monitor);
     const screen_height = rl.getMonitorHeight(monitor);
 
+    // Resize window to match monitor, then toggle borderless fullscreen
+    rl.setWindowSize(screen_width, screen_height);
     rl.toggleBorderlessWindowed();
 
     // Set target FPS (VSync will override this to match monitor refresh rate)
