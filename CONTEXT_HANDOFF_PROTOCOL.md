@@ -78,33 +78,54 @@ This document serves as the **primary communication channel** between sessions. 
 
 ---
 
-## Session 1: 2025-11-09 - Project Initialization and Planning
+## Session 1: 2025-11-09 - Project Initialization and Meta-Framework
 
 ### Session Goal
 1. Initialize Git repository and connect to GitHub
 2. Create comprehensive planning documentation before any code
 3. Define agent orchestration and context management framework
+4. Reorganize repository structure for scalability
 
 ### What Was Accomplished
-- ✅ Git repository initialized at `/home/tbick/Projects/claude/zig_game`
-- ✅ GitHub remote created: https://github.com/TBick/zig_game
-- ✅ Comprehensive planning documents created:
-  - `GAME_DESIGN.md` (156 lines) - Gameplay vision, mechanics, entity systems
-  - `ARCHITECTURE.md` (445 lines) - Technical design, module structure, systems
-  - `DEVELOPMENT_PLAN.md` (652 lines) - 6-phase roadmap, testing strategy, metrics
-  - `LUA_API_SPEC.md` (515 lines) - Complete Lua scripting API specification
+- ✅ **Git Repository Setup**
+  - Git repository initialized at `/home/tbick/Projects/claude/zig_game`
+  - GitHub remote created: https://github.com/TBick/zig_game
+  - 3 commits pushed to main branch
+
+- ✅ **Planning & Design Documentation** (8 files, ~2,100 lines)
+  - `docs/design/GAME_DESIGN.md` (156 lines) - Gameplay vision, mechanics, entity systems
+  - `docs/design/ARCHITECTURE.md` (445 lines) - Technical design, module structure, systems
+  - `docs/design/DEVELOPMENT_PLAN.md` (652 lines) - 6-phase roadmap, testing strategy, metrics
+  - `docs/design/LUA_API_SPEC.md` (515 lines) - Complete Lua scripting API specification
   - `README.md` (128 lines) - Project overview
   - `.gitignore` - Zig project excludes
-- ✅ Agent orchestration framework created:
-  - `AGENT_ORCHESTRATION.md` (800+ lines) - Agent types, orchestration patterns, context preservation
-  - `CONTEXT_HANDOFF_PROTOCOL.md` (this file) - Session transition protocol
-- ✅ Initial commit pushed to GitHub
+
+- ✅ **Meta-Framework Complete** (7 files, ~2,500 lines)
+  - `docs/agent-framework/AGENT_ORCHESTRATION.md` (800+ lines) - Complete agent orchestration guide
+    * Agent types (module, feature, test, review, design, refactoring)
+    * Orchestration patterns (sequential, parallel, map-reduce, iterative)
+    * Context preservation strategies (3-layer architecture)
+    * When to use agents vs direct implementation
+  - `CONTEXT_HANDOFF_PROTOCOL.md` - Session transition protocol with template
+  - `SESSION_STATE.md` - Current progress tracking document
+  - `CLAUDE.md` (400+ lines) - Primary guidance for future Claude Code instances
+    * Essential first steps for new sessions
+    * Build commands and project structure
+    * Architecture overview and development workflow
+    * Session end protocol
+  - `docs/agent-framework/templates/` - Agent prompt templates
+    * `module_agent_template.md` - For implementing modules
+    * `feature_agent_template.md` - For cross-cutting features
+    * `test_agent_template.md` - For test generation
+
+- ✅ **Repository Reorganization**
+  - Created `docs/design/` for design documents
+  - Created `docs/agent-framework/` for orchestration framework
+  - Updated all references in CLAUDE.md to new paths
+  - Decision: Skipped `/agents/` directory (template approach more flexible)
 
 ### What's In Progress (Not Complete)
-- [ ] `SESSION_STATE.md` - Need to create initial state tracking document
-- [ ] `templates/` directory - Need to create agent prompt templates
-- [ ] `CLAUDE.md` - Need to create guidance for future Claude Code instances
-- [ ] Phase 0 tasks - Project setup not yet started
+**None** - All session objectives completed. Ready for Phase 0.
 
 ### Critical Context for Next Session
 
@@ -135,18 +156,30 @@ This document serves as the **primary communication channel** between sessions. 
 - Always update `SESSION_STATE.md` and this handoff file
 - Context preservation is critical (small context window)
 
-**Repository Structure** (as of now):
+**Repository Structure** (current):
 ```
 zig_game/
 ├── .gitignore
 ├── README.md
-├── GAME_DESIGN.md
-├── ARCHITECTURE.md
-├── DEVELOPMENT_PLAN.md
-├── LUA_API_SPEC.md
-├── AGENT_ORCHESTRATION.md
-├── CONTEXT_HANDOFF_PROTOCOL.md (this file)
-└── [to be created: SESSION_STATE.md, templates/, CLAUDE.md, src/, etc.]
+├── CLAUDE.md                         # Primary guide for future sessions
+├── SESSION_STATE.md                  # Current progress tracking
+├── CONTEXT_HANDOFF_PROTOCOL.md       # This file
+│
+├── docs/
+│   ├── design/                       # Design documents
+│   │   ├── GAME_DESIGN.md
+│   │   ├── ARCHITECTURE.md
+│   │   ├── DEVELOPMENT_PLAN.md
+│   │   └── LUA_API_SPEC.md
+│   │
+│   └── agent-framework/              # Agent orchestration
+│       ├── AGENT_ORCHESTRATION.md
+│       └── templates/
+│           ├── module_agent_template.md
+│           ├── feature_agent_template.md
+│           └── test_agent_template.md
+│
+└── [Phase 0: Will create src/, tests/, build.zig, etc.]
 ```
 
 ### Decisions Made
@@ -171,45 +204,65 @@ zig_game/
 - **Rationale**: Determinism (save/load, debugging), fairness (all entities equal CPU), performance budgeting (Lua expensive)
 - **Trade-off**: Not real-time, but interpolation provides smoothness
 
+**Decision 6: docs/ Directory Structure**
+- **Rationale**: Scalability - as project grows, organized structure prevents root directory clutter. Separates design docs from agent framework from code.
+- **Trade-off**: Slightly longer paths, but much better organization
+
+**Decision 7: Skip /agents/ Directory**
+- **Rationale**: Template-based approach provides needed flexibility. Each agent invocation requires customization (module name, API contract, etc.). `/agents/` directory better suited for repeated identical tasks.
+- **Trade-off**: More verbose invocations, but more flexible and avoids duplication with templates
+
 ### Blockers / Issues
 - **None currently** - Still in planning phase
 
 ### Recommended Next Steps
 
-**Immediate (Next Session)**:
-1. **Create `SESSION_STATE.md`** - Initialize progress tracking
-2. **Create `templates/` directory** - Add initial agent templates (start with 3-4 key ones)
-3. **Create `CLAUDE.md`** - Guidance for future Claude Code instances in this repo
-4. **Commit meta-framework** - Push orchestration documents to GitHub
+**Immediate (Next Session - Phase 0 Begins)**:
 
-**After Meta-Framework Complete**:
-5. **Begin Phase 0** - Project setup and infrastructure
-   - Create `build.zig`
-   - Set up directory structure (`src/`, `tests/`, `scripts/`, `assets/`)
-   - Choose and integrate Zig dependencies (Lua bindings, Raylib)
-   - Configure testing framework
-   - Set up CI/CD (GitHub Actions)
+1. **Read Context First**:
+   - `SESSION_STATE.md` - Know current status
+   - This file - Understand Session 1 accomplishments
+   - `git log --oneline -5` - See recent commits
 
-**Phase 0 Specific Tasks** (from DEVELOPMENT_PLAN.md):
-- [ ] Create `build.zig` with compilation targets
-- [ ] Configure debug and release builds
-- [ ] Set up project directory structure
-- [ ] Integrate Lua library (ziglua or custom bindings)
-- [ ] Integrate Raylib (raylib-zig)
-- [ ] Configure Zig test framework
-- [ ] Create test utilities module
-- [ ] Set up CI pipeline (GitHub Actions)
-- [ ] Verify `zig build`, `zig build test`, `zig build run` all work
+2. **Begin Phase 0 - Project Setup**:
+   - Create `build.zig` with compilation targets
+   - Set up `src/` directory structure (all module directories)
+   - Research Lua binding options (ziglua, custom C bindings)
+   - Research Raylib integration (raylib-zig)
+   - Choose libraries and add to build.zig
+   - Test basic compilation
+
+3. **Development Tooling**:
+   - Configure Zig test framework
+   - Create test utilities module
+   - Set up CI/CD (GitHub Actions) for automated testing
+
+4. **Verify Phase 0 Complete**:
+   - `zig build` compiles without errors
+   - `zig build test` runs successfully
+   - `zig build run` launches (even if just empty window or stub)
+   - CI pipeline shows green status
+
+**See `docs/design/DEVELOPMENT_PLAN.md` Phase 0 section for complete task list.**
 
 ### Files Modified
+**Commit 1 - Initial planning**:
 - `.gitignore` (created)
 - `README.md` (created)
-- `GAME_DESIGN.md` (created)
-- `ARCHITECTURE.md` (created)
-- `DEVELOPMENT_PLAN.md` (created)
-- `LUA_API_SPEC.md` (created)
-- `AGENT_ORCHESTRATION.md` (created)
+- Planning docs created (moved to docs/design/ in commit 3)
+
+**Commit 2 - Meta-framework**:
+- `AGENT_ORCHESTRATION.md` (created, moved to docs/agent-framework/ in commit 3)
 - `CONTEXT_HANDOFF_PROTOCOL.md` (created - this file)
+- `SESSION_STATE.md` (created)
+- `CLAUDE.md` (created)
+- `templates/` directory (created, moved to docs/agent-framework/ in commit 3)
+
+**Commit 3 - Reorganization**:
+- Created `docs/design/` and `docs/agent-framework/` directories
+- Moved all design docs to `docs/design/`
+- Moved agent framework files to `docs/agent-framework/`
+- Updated CLAUDE.md with corrected paths
 
 ### Agents Used
 - No agents deployed yet (all direct implementation by primary Claude Code instance)
@@ -217,13 +270,21 @@ zig_game/
 
 ### Notes
 
-**User Guidance**:
-The user emphasized the importance of:
+**Session Success**:
+This session accomplished everything it set out to do:
+- Complete planning documentation (2,100+ lines across 8 files)
+- Complete meta-framework (2,500+ lines across 7 files)
+- Repository properly organized for scalability
+- Clear path forward for Phase 0
+
+**User Guidance Followed**:
+The user wisely insisted on:
 1. Defining meta-level orchestration BEFORE starting implementation
 2. Ensuring autonomous context preservation across sessions
 3. Creating explicit templates and protocols
+4. Organizing repository structure properly
 
-This was wise - the context window limitation is real, and without systematic handoff, we'd lose critical information between sessions.
+All completed in Session 1.
 
 **Documentation Quality**:
 The planning documents are comprehensive and detailed:
@@ -231,22 +292,36 @@ The planning documents are comprehensive and detailed:
 - Architecture provides technical blueprint with concrete examples
 - Development plan has measurable success criteria for each phase
 - Lua API spec includes complete examples and usage patterns
-- Agent orchestration defines when/how to use agents
+- Agent orchestration defines when/how to use agents with 5+ patterns
+- Templates provide reusable structures for common agent tasks
 
-These docs should provide sufficient context for future sessions and subagents.
+**Context Handoff Protocol Working**:
+This very document demonstrates the protocol. Next session should:
+1. Read `SESSION_STATE.md` (know where we are)
+2. Read this entry (understand Session 1)
+3. Check git log (see recent commits)
+4. Proceed with Phase 0 autonomously
 
 **Git Workflow Note**:
 - Initially used SSH remote, but authentication failed
 - Switched to HTTPS remote: `https://github.com/TBick/zig_game.git`
-- Successfully pushed initial commit
+- Successfully pushed 3 commits
+- Repository structure now clean and organized
 
-**Complexity Assessment**:
-This is an ambitious project (10-15 week timeline), but the phased approach and clear architecture make it tractable. The agent orchestration framework should enable effective parallel development.
+**Ready for Phase 0**:
+With planning and meta-framework complete, next session can dive directly into:
+- Creating build.zig
+- Setting up directory structure
+- Integrating dependencies
+- No more meta-work required
 
-**Risk Areas to Monitor**:
+**Risk Areas to Monitor (Unchanged)**:
 1. Lua C API integration (Phase 2) - Most complex/risky component
 2. Performance of Lua scripts at scale (benchmark early and often)
 3. Gameplay fun factor (need early playtesting, not just technical validation)
+
+**Meta-Observation**:
+This session spent significant time on meta-work (orchestration, context management). This is investment, not overhead - it should pay dividends across the 10-15 week timeline by preventing context loss and enabling parallel development.
 
 ---
 
