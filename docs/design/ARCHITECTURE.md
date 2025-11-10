@@ -343,10 +343,28 @@ pub const InputManager = struct {
 
 **build.zig**:
 - Compile Zig source
-- Link Lua library
-- Link rendering library
+- Link Lua library (Lua 5.4 via ziglua)
+- Link rendering library (Raylib via raylib-zig)
 - Bundle assets
 - Run tests
+- Cross-compilation support (Windows, macOS, Linux)
+- Custom install directory option (`-Dinstall-dir`)
+
+**Cross-Compilation**:
+The project supports seamless cross-compilation to Windows from WSL2/Linux:
+```bash
+# Build Windows executable
+zig build -Dtarget=x86_64-windows
+
+# Build with custom install location
+zig build -Dtarget=x86_64-windows -Dinstall-dir="/mnt/d/Library/game-temp"
+```
+
+**Why Windows builds?**
+- WSL2/WSLg has graphics limitations (no working VSync, screen tearing)
+- Native Windows .exe runs with proper VSync and smooth 60 FPS
+- Zig includes all target toolchains - no Windows SDK needed
+- `zig build run` works for Windows .exe from WSL2 (uses Windows graphics)
 
 ## Performance Considerations
 
@@ -409,11 +427,21 @@ See DEVELOPMENT_PLAN.md for detailed phase breakdown.
 **Phase 4**: UI and polish (editor, UI panels, visuals)
 **Phase 5**: Content and balancing (scenarios, tech tree, tuning)
 
+## Technical Decisions Made
+
+- [x] **Rendering library**: Raylib (via raylib-zig) - Selected in Phase 0
+  - Rationale: High-level 2D rendering, cross-platform, WebAssembly support
+- [x] **Lua version**: Lua 5.4 (via ziglua) - Selected in Phase 0
+  - Rationale: Compiles from source, official 5.4 support, no JIT complexity
+- [x] **Build system**: Native Zig build system with cross-compilation
+  - Supports Windows, macOS, Linux targets without additional toolchains
+- [x] **Development environment**: WSL2 with Windows cross-compilation
+  - Windows .exe for graphics (VSync works), WSL2 for development workflow
+
 ## Open Technical Questions
 
-- [ ] Choose rendering library (Raylib vs SDL2 vs Sokol)
-- [ ] Lua vs LuaJIT (performance vs compatibility)
 - [ ] Multi-threading strategy for future scaling
 - [ ] Network architecture for potential multiplayer
 - [ ] Asset pipeline and format
 - [ ] Shader language and integration
+- [ ] Final decision: Lua 5.4 vs LuaJIT (benchmark in Phase 2)

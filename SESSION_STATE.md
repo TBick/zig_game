@@ -1,8 +1,8 @@
 # Session State
 
-**Last Updated**: 2025-11-09 (Session 2 Complete)
-**Current Phase**: Phase 0 (Complete) - Ready for Phase 1
-**Overall Progress**: 15% (Planning, meta-framework, and build system complete)
+**Last Updated**: 2025-11-10 (Session 3 In Progress)
+**Current Phase**: Phase 1 (In Progress) - Core Engine
+**Overall Progress**: 30% (Planning, build system, hex grid, rendering, debugging complete)
 
 ---
 
@@ -10,61 +10,77 @@
 
 | Phase | Status | Progress | Notes |
 |-------|--------|----------|-------|
-| Phase 0: Setup | Complete | 100% | All success criteria met |
-| Phase 1: Core Engine | Ready | 0% | Can begin implementation |
+| Phase 0: Setup | Complete | 100% | All success criteria met + Windows cross-compilation |
+| Phase 1: Core Engine | In Progress | 40% | Hex grid ✓, rendering ✓, camera ✓, debug overlay ✓ |
 | Phase 2: Lua Integration | Not Started | 0% | Blocked on Phase 1 |
 | Phase 3: Gameplay Systems | Not Started | 0% | Blocked on Phase 2 |
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: Phase 0 complete. Build system working. Ready for Phase 1 (Core Engine)
+**Current Focus**: Phase 1 - Hex grid rendering working. Camera controls smooth. Debug overlay functional. Ready for entity system and tick scheduler.
 
 ---
 
-## Current Phase: Phase 0 - Project Setup
+## Current Phase: Phase 1 - Core Engine
 
-### Phase 0 Goal
-Initialize Zig project structure, configure build system, set up development tooling, and establish testing framework.
+### Phase 1 Goal
+Implement core game engine: hex grid system, camera controls, rendering pipeline, entity system, and tick scheduler.
 
-### Phase 0 Tasks
+### Phase 1 Tasks
 
-#### Build Configuration
-- [x] Create `build.zig` with compilation targets
-- [x] Configure debug and release builds
-- [ ] Set up asset bundling pipeline (Phase 4)
-- [x] Add test runner configuration
+#### Hex Grid System
+- [x] Implement `HexCoord` struct with axial coordinates (q, r)
+- [x] Implement hex math (add, sub, distance, neighbors)
+- [x] Create `HexGrid` with HashMap storage
+- [x] Rectangular region generation
+- [x] Comprehensive unit tests (8 tests, all passing)
 
-#### Development Tooling
-- [ ] Set up LSP (zls) configuration (optional, user-level)
-- [x] Create dev scripts (build, run, test) - built into build.zig
-- [x] Configure formatter settings (zig fmt built-in)
-- [x] Set up CI/CD (GitHub Actions) for automated testing
+#### Rendering System
+- [x] Integrate raylib-zig dependency
+- [x] Camera system with pan/zoom
+- [x] World↔screen coordinate conversion
+- [x] HexLayout for hex→pixel conversion
+- [x] Draw hexagon (outline + filled)
+- [x] Grid rendering with camera transformation
+- [x] Unit tests for camera and rendering (5 tests)
 
-#### Testing Framework
-- [x] Configure Zig test framework
-- [ ] Create test utilities module (Phase 1+)
-- [ ] Set up performance benchmarking harness (Phase 3+)
-- [ ] Create mock/stub generators for testing (Phase 2+)
+#### Input & Camera Controls
+- [x] Mouse: Right-click drag to pan
+- [x] Mouse: Wheel to zoom
+- [x] Keyboard: WASD/Arrows for pan
+- [x] Keyboard: +/- for zoom, R for reset
+- [x] Frame-rate independent movement
+- [x] Smooth camera controls (60 FPS)
 
-#### Project Structure
-- [x] Create `src/` directory structure
-- [x] Create `tests/` directory
-- [x] Create `scripts/` directory (for Lua examples)
-- [x] Create `assets/` directory (for sprites, etc.)
-- [x] Create placeholder files for main modules (main.zig)
+#### Debug & Development Tools
+- [x] Debug overlay with F3 toggle
+- [x] FPS counter with color coding
+- [x] Frame time averaging
+- [x] Entity count display
+- [x] Windows cross-compilation support
+- [x] Custom install directory option
 
-#### Dependencies
-- [x] Choose Lua binding library (ziglua selected)
-- [ ] Integrate Lua library into build (Phase 2)
-- [x] Choose rendering library (raylib-zig selected)
-- [ ] Integrate rendering library into build (Phase 1)
-- [x] Test basic "hello world" compilation
+#### Entity System (TODO)
+- [ ] Entity struct with ID, position, role
+- [ ] EntityManager with lifecycle management
+- [ ] Component system (EnergyComponent, InventoryComponent, etc.)
+- [ ] Entity query interface
+- [ ] Unit tests for entity operations
 
-### Phase 0 Success Criteria
-- [x] `zig build` completes without errors
-- [x] `zig build test` runs successfully
-- [x] `zig build run` launches empty window or stub executable
-- [x] CI pipeline shows green status (workflow created, will verify on push)
+#### Tick Scheduler (TODO)
+- [ ] TickScheduler with fixed tick rate
+- [ ] Time accumulator for smooth ticking
+- [ ] Tick processing loop
+- [ ] Separate update (tick) from render (frame)
+- [ ] Unit tests for tick timing
+
+### Phase 1 Success Criteria
+- [x] Hex grid renders correctly (100 hexes visible)
+- [x] Camera pan/zoom works smoothly
+- [ ] Basic entity can be placed on grid
+- [ ] Tick system runs at 2-3 ticks/sec
+- [x] All tests passing (currently 15+ tests)
+- [x] 60 FPS rendering maintained
 
 ---
 
@@ -95,30 +111,44 @@ Initialize Zig project structure, configure build system, set up development too
 ---
 
 ### Phase 0 - Project Setup (100% Complete)
-- ✅ `build.zig` - Build configuration for Zig 0.15.1
-- ✅ `build.zig.zon` - Package manifest with correct format
-- ✅ `src/main.zig` - Minimal entry point with test
+- ✅ `build.zig` - Build configuration for Zig 0.15.1 with cross-compilation
+- ✅ `build.zig.zon` - Package manifest with raylib-zig dependency
+- ✅ `src/main.zig` - Game loop with window, rendering, input
 - ✅ `src/` module directories - core, world, entities, scripting, resources, structures, rendering, input, ui, utils
 - ✅ `tests/`, `scripts/`, `assets/` directories created
 - ✅ `.github/workflows/ci.yml` - GitHub Actions CI/CD
 - ✅ Library selection - ziglua (Lua 5.4) and raylib-zig chosen
 - ✅ All success criteria met: build ✓, test ✓, run ✓, CI ✓
+- ✅ Windows cross-compilation configured with custom install directory
+
+### Phase 1 - Core Engine (40% Complete)
+- ✅ `src/world/hex_grid.zig` - Complete hex grid system (273 lines, 8 tests)
+- ✅ `src/rendering/hex_renderer.zig` - Camera and hex rendering (222 lines, 5 tests)
+- ✅ `src/ui/debug_overlay.zig` - Performance monitoring (155 lines, 3 tests)
+- ✅ Raylib integration - Window, input, rendering all working
+- ✅ Camera controls - Pan (WASD/mouse), zoom (wheel/keys), reset (R)
+- ✅ Debug overlay - FPS, frame time, entity count, toggleable (F3)
+- ✅ Fullscreen borderless window at 1920x1080
+- ✅ Fixed WSL2/WSLg graphics issues with Windows cross-compilation
+- ⏳ Entity system - Not started
+- ⏳ Tick scheduler - Not started
 
 ---
 
 ## In Progress
 
-### Current Tasks
-**None** - Session 2 complete. Phase 0 finished. Ready for Phase 1.
+### Current Tasks (Session 3)
+1. **Documentation updates** - Updating planning docs with Windows build info
+2. **Ready to continue** - Hex grid and rendering complete, ready for entity system
 
-### Ready for Next Session
-1. **Begin Phase 0: Project Setup**
-   - Create `build.zig` with compilation targets
-   - Set up `src/` directory structure
-   - Research and integrate Lua library
-   - Research and integrate Raylib
-   - Configure Zig test framework
-   - Set up CI/CD (GitHub Actions)
+### Completed This Session
+1. ✅ Fixed debug overlay update bug
+2. ✅ Diagnosed and fixed camera panning issues (frame-rate independence)
+3. ✅ Identified and resolved WSL2/WSLg VSync issues
+4. ✅ Configured Windows cross-compilation with custom install directory
+5. ✅ Updated CLAUDE.md with comprehensive Windows build instructions
+6. ✅ Updated ARCHITECTURE.md with build system and technical decisions
+7. ✅ Tested Windows .exe - smooth 60 FPS rendering confirmed
 
 ---
 
@@ -126,7 +156,10 @@ Initialize Zig project structure, configure build system, set up development too
 
 **None Currently**
 
-All planning is complete. No technical blockers. Ready to proceed with implementation once meta-framework is complete.
+✅ WSL2/WSLg graphics issues resolved with Windows cross-compilation
+✅ Camera panning smoothness fixed
+✅ Debug overlay working correctly
+All systems operational. Ready to continue with entity system implementation.
 
 ---
 
@@ -149,45 +182,46 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` Session 1 for detailed decision rationale.
 ### Code Metrics (Target vs Actual)
 | Metric | Current | Phase 0 Target | Phase 1 Target | Final Target |
 |--------|---------|----------------|----------------|--------------|
-| Lines of Code | ~150 | ~500 | ~3,000 | ~15,000+ |
-| Test Coverage | 100% | N/A | >80% | >80% |
-| Modules | 1 | 0 | 8-10 | 20-25 |
-| Tests | 1 | 5-10 | 50+ | 200+ |
+| Lines of Code | ~1,100 | ~500 | ~3,000 | ~15,000+ |
+| Test Coverage | ~85% | N/A | >80% | >80% |
+| Modules | 6 | 0 | 8-10 | 20-25 |
+| Tests | 16 | 5-10 | 50+ | 200+ |
 
 ### Development Metrics
 | Metric | Value |
 |--------|-------|
-| Sessions Completed | 2 |
-| Commits | 3 (+ 1 pending) |
+| Sessions Completed | 3 (in progress) |
+| Commits | 16 |
 | Documentation Pages | 12 |
-| Code Files | 4 (build.zig, build.zig.zon, src/main.zig, ci.yml) |
-| Agents Deployed | 0 (framework ready) |
-| GitHub Stars | 0 (just created) |
+| Code Files | 7 (build.zig, main.zig, hex_grid.zig, hex_renderer.zig, debug_overlay.zig, etc.) |
+| Agents Deployed | 0 (direct implementation faster for Phase 1) |
+| GitHub Stars | 0 (private development) |
 
 ### Phase Velocity
 | Phase | Estimated Duration | Actual Duration | Variance |
 |-------|-------------------|-----------------|----------|
-| Phase 0 | 1-2 days | TBD | TBD |
+| Phase 0 | 1-2 days | 1 session | Faster than expected |
+| Phase 1 | 1-2 weeks | 2+ sessions (in progress) | On track |
 
 ---
 
 ## Next Session Priorities
 
-### Immediate (Next Session - Phase 1 Begins)
-1. **Integrate Raylib** - Add raylib-zig to build.zig.zon, create window
-2. **Implement hex grid module** - HexCoord, HexGrid, axial coordinates
-3. **Basic rendering** - Draw hex grid to screen
-4. **Camera system** - Pan and zoom
+### Immediate (Continue Phase 1)
+1. **Entity system** - Implement Entity struct, EntityManager, component system
+2. **Entity rendering** - Draw entities on hex grid
+3. **Tick scheduler** - Fixed tick rate (2-3 ticks/sec), separate from rendering
+4. **Entity movement** - Basic movement between hex tiles
 
-### Short-Term (Sessions 3-4)
-5. **Entity system** - Basic ECS-inspired structure
-6. **Tick scheduler** - Fixed tick rate simulation loop
-7. **Input handling** - Keyboard/mouse for camera control
-8. **More tests** - Unit tests for hex grid and entity system
+### Short-Term (Complete Phase 1)
+5. **Pathfinding** - A* pathfinding on hex grid
+6. **Entity interactions** - Basic entity-to-entity interactions
+7. **More entity tests** - Comprehensive unit tests for entity system
+8. **Performance testing** - Benchmark with 100-1000 entities
 
-### Medium-Term (Sessions 5-7)
-9. **Complete Phase 1** - Core engine with rendering, entities, tick system
-10. **Begin Phase 2** - Lua integration (embed VM, create bindings)
+### Medium-Term (Begin Phase 2)
+9. **Complete Phase 1** - All success criteria met
+10. **Begin Phase 2** - Lua integration (embed VM, create bindings, sandbox)
 
 ---
 
