@@ -21,14 +21,8 @@ pub fn main() !void {
     rl.setWindowSize(screen_width, screen_height);
     rl.toggleBorderlessWindowed();
 
-    // Set target FPS (VSync will override this to match monitor refresh rate)
-    rl.setTargetFPS(60);
-
-    // DEBUG: Print window info
-    std.debug.print("Monitor: {}, size: {}x{}, refresh: {}Hz\n", .{
-        monitor, screen_width, screen_height, rl.getMonitorRefreshRate(monitor)
-    });
-    std.debug.print("Window size after fullscreen: {}x{}\n", .{rl.getScreenWidth(), rl.getScreenHeight()});
+    // Don't set target FPS - let VSync control frame rate entirely
+    // rl.setTargetFPS(60); // Removed - conflicts with VSync
 
     // Initialize hex grid
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -47,11 +41,16 @@ pub fn main() !void {
     // Initialize debug overlay
     var debug_overlay = DebugOverlay.init();
 
+    // Frame counter for testing
+    var frame_counter: u64 = 0;
+
     // Camera controls
     var last_mouse_pos = rl.getMousePosition();
 
     // Main game loop
     while (!rl.windowShouldClose()) {
+        frame_counter += 1;
+
         // Update
         const mouse_pos = rl.getMousePosition();
 
@@ -75,9 +74,7 @@ pub fn main() !void {
         const frame_time = rl.getFrameTime();
         const pan_speed = base_speed * frame_time;
 
-        // DEBUG: Print pan_speed when a key is pressed
         if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
-            std.debug.print("Pan LEFT: frame_time={d:.6}, pan_speed={d:.2}\n", .{frame_time, pan_speed});
             renderer.camera.pan(-pan_speed, 0);
         }
         if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
@@ -129,6 +126,11 @@ pub fn main() !void {
         // Draw UI
         rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 180, 20, rl.Color.ray_white);
         rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 210, 14, rl.Color.light_gray);
+
+        // Display frame counter to verify smooth rendering
+        var frame_buf: [100:0]u8 = undefined;
+        const frame_text = std.fmt.bufPrintZ(&frame_buf, "Frame: {d}", .{frame_counter}) catch "Error";
+        rl.drawText(frame_text, 10, 240, 14, rl.Color.yellow);
 
         // Draw camera info
         const cam_y = current_height - 60;
