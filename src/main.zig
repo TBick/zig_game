@@ -21,8 +21,8 @@ pub fn main() !void {
     rl.setWindowSize(screen_width, screen_height);
     rl.toggleBorderlessWindowed();
 
-    // Don't set target FPS - let VSync control frame rate entirely
-    // rl.setTargetFPS(60); // Removed - conflicts with VSync
+    // VSync doesn't work properly in WSL2/WSLg, so use setTargetFPS for consistent frame pacing
+    rl.setTargetFPS(60);
 
     // Initialize hex grid
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -41,16 +41,11 @@ pub fn main() !void {
     // Initialize debug overlay
     var debug_overlay = DebugOverlay.init();
 
-    // Frame counter for testing
-    var frame_counter: u64 = 0;
-
     // Camera controls
     var last_mouse_pos = rl.getMousePosition();
 
     // Main game loop
     while (!rl.windowShouldClose()) {
-        frame_counter += 1;
-
         // Update
         const mouse_pos = rl.getMousePosition();
 
@@ -126,11 +121,6 @@ pub fn main() !void {
         // Draw UI
         rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 180, 20, rl.Color.ray_white);
         rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 210, 14, rl.Color.light_gray);
-
-        // Display frame counter to verify smooth rendering
-        var frame_buf: [100:0]u8 = undefined;
-        const frame_text = std.fmt.bufPrintZ(&frame_buf, "Frame: {d}", .{frame_counter}) catch "Error";
-        rl.drawText(frame_text, 10, 240, 14, rl.Color.yellow);
 
         // Draw camera info
         const cam_y = current_height - 60;
