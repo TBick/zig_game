@@ -53,13 +53,13 @@ After reading above, you know:
 
 ## Build Commands
 
-### Development Commands
+### Development Commands (Linux/WSL2)
 
 ```bash
-# Build the project (debug mode)
+# Build the project (debug mode, Linux binary)
 zig build
 
-# Build and run
+# Build and run (Linux binary in WSL2)
 zig build run
 
 # Run tests
@@ -78,11 +78,69 @@ zig fmt src/
 rm -rf zig-cache zig-out
 ```
 
+### Windows Cross-Compilation (from WSL2)
+
+**Why build for Windows?**
+- WSL2/WSLg has graphics issues (no VSync, screen tearing, choppy rendering)
+- Native Windows .exe runs with proper VSync and smooth graphics
+- Zig can cross-compile without needing Windows SDK!
+
+```bash
+# Build Windows .exe (debug mode)
+zig build -Dtarget=x86_64-windows
+
+# Build Windows .exe (optimized release)
+zig build -Dtarget=x86_64-windows -Doptimize=ReleaseFast
+
+# Build and copy to custom directory (e.g., D: drive from WSL2)
+zig build -Dtarget=x86_64-windows -Dinstall-dir="/mnt/d/Library/game-temp"
+
+# Build release Windows .exe to custom directory
+zig build -Dtarget=x86_64-windows -Doptimize=ReleaseFast -Dinstall-dir="/mnt/d/Library/game-temp"
+```
+
+**Output locations:**
+- Default: `zig-out/bin/zig_game.exe`
+- Custom: `/mnt/d/Library/game-temp/zig_game.exe` (if using `-Dinstall-dir`)
+
+**Running the Windows .exe:**
+```bash
+# From WSL2 (uses Windows graphics layer)
+./zig-out/bin/zig_game.exe
+
+# Or from custom directory
+/mnt/d/Library/game-temp/zig_game.exe
+
+# Or copy to Windows desktop and double-click
+cp zig-out/bin/zig_game.exe /mnt/c/Users/YourUsername/Desktop/
+```
+
+### Does `zig build run` work for Windows builds?
+
+**Yes!** You can use `zig build run` for any target:
+
+```bash
+# Run Linux binary (default)
+zig build run
+
+# Run Windows .exe from WSL2
+zig build run -Dtarget=x86_64-windows
+
+# Run Windows .exe with custom install directory
+zig build run -Dtarget=x86_64-windows -Dinstall-dir="/mnt/d/Library/game-temp"
+```
+
+When you run a Windows .exe from WSL2, it automatically uses Windows graphics, which fixes the VSync and rendering issues!
+
 ### Build System
 
 - **Build file**: `build.zig`
 - **Dependencies**: Managed in `build.zig.zon` (Zig package manager)
 - **Test runner**: Built into Zig (`zig build test`)
+- **Cross-compilation**: Zig includes all target toolchains by default
+
+**Custom Install Directory:**
+The `-Dinstall-dir` option installs to BOTH the default location (`zig-out/bin/`) AND your custom directory. This way you can test with `zig build run` and also have the binary in your preferred location.
 
 **Note**: Build system created in Phase 0. If it doesn't exist yet, we're still in planning/setup.
 

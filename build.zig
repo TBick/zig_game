@@ -7,6 +7,9 @@ pub fn build(b: *std.Build) void {
     // Standard optimization options
     const optimize = b.standardOptimizeOption(.{});
 
+    // Optional custom install directory
+    const install_dir = b.option([]const u8, "install-dir", "Custom installation directory") orelse null;
+
     // Get raylib-zig dependency
     const raylib_dep = b.dependency("raylib_zig", .{
         .target = target,
@@ -32,8 +35,18 @@ pub fn build(b: *std.Build) void {
     // Link raylib
     exe.linkLibrary(raylib_artifact);
 
-    // Install the executable
+    // Install the executable to default location (zig-out/bin/)
     b.installArtifact(exe);
+
+    // If custom install directory specified, also copy there
+    if (install_dir) |dir| {
+        const install_file = b.addInstallFileWithDir(
+            exe.getEmittedBin(),
+            .{ .custom = dir },
+            b.fmt("{s}{s}", .{ exe.name, target.result.exeFileExt() }),
+        );
+        b.getInstallStep().dependOn(&install_file.step);
+    }
 
     // Create run step
     const run_cmd = b.addRunArtifact(exe);
