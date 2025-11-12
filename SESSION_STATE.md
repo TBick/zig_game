@@ -1,8 +1,8 @@
 # Session State
 
-**Last Updated**: 2025-11-11 (Session 4 Complete)
-**Current Phase**: Phase 1 (Near Complete) - Core Engine + Entity Selection
-**Overall Progress**: 70% of Phase 1 (Planning, setup, rendering, entities, selection all complete)
+**Last Updated**: 2025-11-11 (Session 5 Complete)
+**Current Phase**: Phase 2 (In Progress) - Lua Integration Started
+**Overall Progress**: Phase 1 Complete (100%), Phase 2 Started (30%)
 
 ---
 
@@ -11,13 +11,13 @@
 | Phase | Status | Progress | Notes |
 |-------|--------|----------|-------|
 | Phase 0: Setup | Complete | 100% | All success criteria met + Windows cross-compilation |
-| Phase 1: Core Engine | Near Complete | 70% | Hex grid ✓, rendering ✓, entities ✓, tick scheduler ✓, selection ✓ |
-| Phase 2: Lua Integration | Not Started | 0% | Ready to begin |
+| Phase 1: Core Engine | Complete | 100% | Hex grid ✓, rendering ✓, entities ✓, tick scheduler ✓, selection ✓ |
+| Phase 2: Lua Integration | In Progress | 30% | Lua 5.4 integrated with raw C bindings, VM wrapper complete |
 | Phase 3: Gameplay Systems | Not Started | 0% | Blocked on Phase 2 |
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: Phase 1 nearly complete! Entity selection system implemented as preparation for Phase 2 debugging. Ready to begin Lua integration.
+**Current Focus**: Phase 2 Lua Integration in progress! Successfully integrated Lua 5.4 with raw C bindings. Basic VM and tests working. Next: Entity/World Lua APIs.
 
 ---
 
@@ -100,9 +100,75 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 - [x] Camera pan/zoom works smoothly
 - [x] Basic entities can be placed on grid
 - [x] Tick system runs at 2.5 ticks/sec
-- [x] All tests passing (currently 104 tests!)
+- [x] All tests passing (currently 109 tests!)
 - [x] 60 FPS rendering maintained
 - [x] Entity selection working (click to select/inspect)
+
+**Phase 1 Status**: ✅ COMPLETE (100%)
+
+---
+
+## Current Phase: Phase 2 - Lua Integration
+
+### Phase 2 Goal
+Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entity script execution with sandboxing.
+
+### Phase 2 Tasks
+
+#### Lua VM Integration ✅
+- [x] Research Lua binding options (ziglua incompatible with Zig 0.15.1)
+- [x] Download and vendor Lua 5.4.8 source code
+- [x] Configure build.zig to compile Lua C source
+- [x] Create raw C API bindings (lua_c.zig ~200 lines)
+- [x] Create Zig-friendly VM wrapper (lua_vm.zig ~170 lines)
+- [x] Implement VM lifecycle (init/deinit)
+- [x] Implement doString() for code execution
+- [x] Implement get/setGlobal for numbers and strings
+- [x] Write comprehensive tests (5 tests, all passing)
+
+#### Entity Lua API 🔄 (In Progress)
+- [ ] Expose entity.getPosition() to Lua
+- [ ] Expose entity.getEnergy() to Lua
+- [ ] Expose entity.getRole() to Lua
+- [ ] Expose entity.move(direction) to Lua
+- [ ] Expose entity.harvest() to Lua
+- [ ] Test entity API from Lua scripts
+
+#### World Query API ⏳
+- [ ] Expose world.getTileAt(q, r) to Lua
+- [ ] Expose world.findEntities(predicate) to Lua
+- [ ] Expose world.getNeighbors(position) to Lua
+- [ ] Test world API from Lua scripts
+
+#### Script Execution System ⏳
+- [ ] Integrate Lua VM into EntityManager
+- [ ] Execute per-entity scripts each tick
+- [ ] Handle script errors gracefully
+- [ ] Test multi-entity script execution
+
+#### Sandboxing ⏳
+- [ ] Implement CPU instruction limits (10,000/entity/tick)
+- [ ] Implement memory limits (1MB per entity)
+- [ ] Restrict dangerous stdlib functions (io, os, debug)
+- [ ] Test sandbox enforcement
+
+#### Example Scripts ⏳
+- [ ] Create harvester bot Lua script
+- [ ] Create builder bot Lua script
+- [ ] Create explorer bot Lua script
+- [ ] Test scripts in game
+
+### Phase 2 Success Criteria
+- [ ] Lua VM integrated and tested (✅ DONE)
+- [ ] Entity API exposed to Lua
+- [ ] World API exposed to Lua
+- [ ] Per-entity scripts execute each tick
+- [ ] CPU/memory sandboxing enforced
+- [ ] 3+ example Lua scripts working
+- [ ] All tests passing (target: 125+ tests)
+- [ ] 60 FPS maintained with 100+ entities running scripts
+
+**Phase 2 Status**: 🔄 IN PROGRESS (30%)
 
 ---
 
@@ -144,7 +210,7 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 - ✅ All success criteria met: build ✓, test ✓, run ✓, CI ✓
 - ✅ Windows cross-compilation configured with custom install directory
 
-### Phase 1 - Core Engine (70% Complete)
+### Phase 1 - Core Engine (100% Complete)
 - ✅ `src/world/hex_grid.zig` - Complete hex grid system (550+ lines, 27 tests)
 - ✅ `src/rendering/hex_renderer.zig` - Camera and hex rendering (492 lines, 22 tests)
 - ✅ `src/rendering/entity_renderer.zig` - Entity rendering with selection (400 lines, 15 tests)
@@ -160,6 +226,45 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 - ✅ Debug overlay - FPS, frame time, entity count, toggleable (F3)
 - ✅ Fullscreen borderless window with proper VSync handling
 - ✅ Fixed WSL2/WSLg graphics issues with Windows cross-compilation
+
+### Phase 2 - Lua Integration (30% Complete)
+- ✅ `vendor/lua-5.4.8/` - Complete Lua 5.4.8 source code (34 C files)
+- ✅ `src/scripting/lua_c.zig` - Raw Lua C API bindings (~200 lines)
+- ✅ `src/scripting/lua_vm.zig` - Zig-friendly Lua VM wrapper (~170 lines, 5 tests)
+- ✅ build.zig - Lua C source compilation integrated
+- ✅ Lua VM lifecycle - init, deinit, proper cleanup
+- ✅ Basic Lua execution - doString() with error handling
+- ✅ Global variables - get/set for numbers and strings
+- ✅ Memory safety - allocator-based string handling
+- ✅ 5 comprehensive tests - VM, execution, globals, math, strings
+
+---
+
+## Completed This Session (Session 5)
+
+### Lua 5.4 Integration with Raw C Bindings
+1. ✅ Discovered ziglua incompatibility with Zig 0.15.1
+2. ✅ Downloaded and vendored Lua 5.4.8 source code
+3. ✅ Configured build.zig to compile Lua C source directly
+4. ✅ Created lua_c.zig with ~200 lines of raw C API bindings
+5. ✅ Created lua_vm.zig with high-level Zig wrapper
+6. ✅ Implemented 5 comprehensive Lua tests (all passing)
+7. ✅ Updated all documentation with Phase 2 progress
+
+### Key Achievements
+- **Test Count**: 104 → 109 tests (+5 Lua tests)
+- **Lua Integration**: Complete VM with raw C bindings
+- **No External Dependencies**: Bypassed ziglua blocker
+- **Full Control**: Direct access to Lua C API
+- **Memory Safe**: Proper allocator-based string handling
+- **All Tests Passing**: 100% pass rate, 0 memory leaks
+
+### Technical Highlights
+- **Why Raw C Bindings**: Ziglua 0.5.0 targets Zig 0.14.0, incompatible with 0.15.1
+- **Lua 5.4.8**: Latest stable release, compiled from source
+- **Build Time**: ~3 seconds (Lua adds minimal overhead)
+- **Executable Size**: 21MB (includes Lua + Raylib)
+- **API Coverage**: Essential functions for script execution and global variables
 
 ---
 
@@ -193,7 +298,12 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 
 ## In Progress
 
-**None** - Session 4 complete. Ready for Phase 2 (Lua Integration).
+**Phase 2: Lua Integration** (30% complete)
+- ✅ Lua VM integrated with raw C bindings
+- 🔄 Next: Entity Lua API (entity.getPosition(), entity.move(), etc.)
+- ⏳ Todo: World Query API (world.getTileAt(), world.findEntities())
+- ⏳ Todo: Per-entity script execution in tick system
+- ⏳ Todo: CPU/memory sandboxing
 
 ---
 
@@ -201,10 +311,11 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 
 **None Currently**
 
-✅ All Phase 1 systems operational
-✅ Entity selection working perfectly
-✅ 104 tests passing with zero memory leaks
-✅ Ready to begin Phase 2 (Lua Integration)
+✅ ziglua blocker resolved with raw C bindings
+✅ Lua 5.4.8 integrated and tested
+✅ 109 tests passing with zero memory leaks
+✅ Build system stable (3 second build time)
+✅ Ready to continue Phase 2 (Entity/World APIs)
 
 ---
 
@@ -220,28 +331,31 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 5. **Development**: 6-phase approach
 6. **Entity Selection**: Implemented NOW (before Phase 2) for debugging support
 7. **Entity Roles**: Four types (worker, combat, scout, engineer) - easily expandable
+8. **Lua Bindings**: Raw C bindings instead of ziglua (incompatible with Zig 0.15.1)
 
 ---
 
 ## Key Metrics
 
 ### Code Metrics (Target vs Actual)
-| Metric | Current | Phase 0 Target | Phase 1 Target | Final Target |
-|--------|---------|----------------|----------------|--------------|
-| Lines of Code | ~3,000+ | ~500 | ~3,000 | ~15,000+ |
-| Test Coverage | >90% | N/A | >80% | >80% |
-| Modules | 9 | 0 | 8-10 | 20-25 |
-| Tests | 104 | 5-10 | 50+ | 200+ |
+| Metric | Current | Phase 0 Target | Phase 1 Target | Phase 2 Target | Final Target |
+|--------|---------|----------------|----------------|----------------|--------------|
+| Lines of Code | ~3,370+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
+| Test Coverage | >90% | N/A | >80% | >85% | >80% |
+| Modules | 11 | 0 | 8-10 | 12-15 | 20-25 |
+| Tests | 109 | 5-10 | 50+ | 125+ | 200+ |
 
 ### Development Metrics
 | Metric | Value |
 |--------|-------|
-| Sessions Completed | 4 |
-| Commits | 20+ |
+| Sessions Completed | 5 |
+| Commits | 22+ |
 | Documentation Pages | 14 |
-| Code Files | 9 core modules + main.zig |
-| Tests Passing | 104 / 104 (100%) |
+| Code Files | 11 modules + main.zig + vendored Lua |
+| Tests Passing | 109 / 109 (100%) |
 | Memory Leaks | 0 |
+| Build Time | ~3 seconds |
+| Executable Size | 21MB (Lua + Raylib) |
 | GitHub Stars | 0 (private development) |
 
 ### Phase Velocity
@@ -249,16 +363,17 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 |-------|-------------------|-----------------|----------|
 | Phase 0 | 1-2 days | 1 session | ✅ Faster than expected |
 | Phase 1 | 1-2 weeks | 4 sessions | ✅ On track, high quality |
+| Phase 2 | 1-2 weeks | 1 session so far (30%) | 🔄 In progress |
 
 ---
 
 ## Next Session Priorities
 
-### Immediate (Begin Phase 2 - Lua Integration)
-1. **Lua VM embedding** - Embed Lua 5.4 runtime using ziglua
-2. **Basic API bindings** - Expose basic game functions to Lua
-3. **Sandboxing** - CPU/memory limits, restricted stdlib access
-4. **Simple test script** - Write "Hello World" Lua script
+### Immediate (Continue Phase 2 - Entity Lua API)
+1. **Entity Lua API** - Expose entity.getPosition(), entity.getEnergy(), entity.getRole()
+2. **Entity Actions** - Implement entity.move(), entity.harvest(), entity.build()
+3. **World Query API** - Expose world.getTileAt(), world.findEntities()
+4. **Test Entity API** - Write Lua scripts that interact with entities
 
 ### Short-Term (Complete Phase 2)
 5. **Entity API** - Expose entity.move(), entity.getEnergy(), etc. to Lua

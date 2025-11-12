@@ -827,6 +827,220 @@ All Phase 1 success criteria met or exceeded!
 
 ---
 
+## Session 5: 2025-11-11 - Phase 2 Milestone: Lua 5.4 Integration
+
+### Session Goal
+Begin Phase 2 by integrating Lua 5.4 runtime for entity scripting. Overcome any dependency/compatibility issues and create foundation for Lua-based gameplay.
+
+### What Was Accomplished
+- ✅ **Discovered ziglua incompatibility** with Zig 0.15.1
+  - ziglua 0.5.0 targets Zig 0.14.0
+  - lua_all.zig FileNotFound error in build
+  - Decision: Use raw C bindings instead
+
+- ✅ **Vendored Lua 5.4.8 source code**
+  - Downloaded official Lua 5.4.8 release
+  - Extracted to vendor/lua-5.4.8/ (34 C files)
+  - Configured build.zig to compile Lua directly
+
+- ✅ **Created raw C API bindings** (src/scripting/lua_c.zig, ~200 lines)
+  - Direct imports of essential Lua C API functions
+  - Zig-friendly helper functions (pop, remove, isBoolean)
+  - Error message extraction utilities
+  - Type-safe wrappers for common operations
+
+- ✅ **Created Zig-friendly VM wrapper** (src/scripting/lua_vm.zig, ~170 lines)
+  - LuaVM struct with init/deinit lifecycle
+  - doString() for executing Lua code with error handling
+  - get/setGlobalNumber() and get/setGlobalString()
+  - Proper allocator-based memory management
+  - 5 comprehensive tests (all passing)
+
+- ✅ **Updated documentation** - SESSION_STATE.md and CONTEXT_HANDOFF_PROTOCOL.md
+
+### What's In Progress (Not Complete)
+- Entity Lua API (entity.getPosition(), entity.move(), etc.) - Not started
+- World Query API (world.getTileAt(), world.findEntities()) - Not started
+- Per-entity script execution - Not started
+- CPU/memory sandboxing - Not started
+
+### Critical Context for Next Session
+
+**Lua Integration Complete (Foundation)**:
+- Lua 5.4.8 compiled and linked successfully
+- Build time: ~3 seconds (minimal overhead)
+- Executable size: 21MB (includes Lua + Raylib)
+- No external dependencies (ziglua blocker resolved)
+- Full control over Lua C API
+
+**Raw C Bindings Architecture**:
+```
+src/scripting/
+  ├── lua_c.zig      - Raw C API bindings (~200 lines)
+  └── lua_vm.zig     - Zig-friendly wrapper (~170 lines, 5 tests)
+
+vendor/lua-5.4.8/    - Complete Lua source (34 C files)
+```
+
+**Test Coverage**:
+- Total tests: 109 (104 from Phase 1 + 5 Lua tests)
+- Lua tests: VM lifecycle, doString(), globals, math, strings
+- All passing, 0 memory leaks
+
+**Key Files to Understand for Next Session**:
+1. `src/scripting/lua_c.zig` - Low-level Lua C API
+2. `src/scripting/lua_vm.zig` - High-level Zig interface
+3. `build.zig` lines 38-80 - Lua C source compilation
+4. `vendor/lua-5.4.8/src/` - Lua C headers for reference
+
+### Decisions Made
+
+**Decision 1: Use Raw C Bindings Instead of ziglua**
+- **Rationale**: ziglua 0.5.0 incompatible with Zig 0.15.1, no Zig 0.15.x version available
+- **Benefits**:
+  - Full control over API surface
+  - No waiting for third-party updates
+  - Educational value (understand Lua C API)
+  - Easier debugging without abstraction layers
+  - Can migrate to ziglua later if desired
+- **Trade-off**: More manual work upfront, but eliminates blocker
+
+**Decision 2: Vendor Lua 5.4.8 Source**
+- **Rationale**: Simplest integration, no system dependencies
+- **Benefits**:
+  - Hermetic build (no external Lua required)
+  - Version locked (no surprise updates)
+  - Cross-platform (works everywhere Zig does)
+  - Fast builds (compiled once, cached)
+- **Trade-off**: 34 C files in repo, but they're small and stable
+
+**Decision 3: Compile Lua Directly into Executable**
+- **Rationale**: Simpler than static library, easier to debug
+- **Alternative**: Could use addLibrary with .linkage = .static
+- **Trade-off**: Slightly longer compile on clean build, but caching makes it negligible
+
+### Blockers / Issues
+
+**Resolved**:
+- ✅ ziglua incompatibility - Resolved with raw C bindings
+- ✅ Zig 0.15.1 API changes - Adapted build.zig accordingly
+
+**None Currently** - All systems operational, ready to continue Phase 2
+
+### Recommended Next Steps
+
+**Immediate (Next Session - Entity Lua API)**:
+
+1. **Create Entity Lua API Module** (src/scripting/entity_api.zig)
+   - Register C functions with Lua VM
+   - Expose entity.getPosition() → returns {q, r}
+   - Expose entity.getEnergy() → returns number
+   - Expose entity.getRole() → returns string
+   - Pass entity pointer via Lua userdata
+   - Write tests for each API function
+
+2. **Implement Entity Actions**:
+   - entity.move(direction) - Move entity in hex direction
+   - entity.harvest() - Harvest resources at current position
+   - entity.build(structure_type) - Start building a structure
+   - Each action returns success/failure + message
+
+3. **Create World Query API** (src/scripting/world_api.zig):
+   - world.getTileAt(q, r) - Get tile information
+   - world.findEntities(predicate) - Find nearby entities
+   - world.getNeighbors(position) - Get adjacent tiles
+
+4. **Test Entity/World APIs**:
+   - Create test Lua scripts in scripts/tests/
+   - Verify API functions work from Lua
+   - Test error handling (invalid args, etc.)
+
+**Short-Term (Complete Phase 2)**:
+
+5. **Integrate Scripts into Tick System**:
+   - Add script field to Entity struct
+   - Load Lua script per entity
+   - Execute scripts in tick loop
+   - Handle script errors gracefully
+
+6. **Implement Sandboxing**:
+   - CPU instruction limits (lua_sethook)
+   - Memory limits (lua_setallocf with tracking)
+   - Restrict stdlib (remove io, os, debug)
+   - Test sandbox enforcement
+
+7. **Create Example Scripts**:
+   - Harvester bot (finds/harvests resources)
+   - Builder bot (constructs structures)
+   - Explorer bot (maps unknown territory)
+
+**See `docs/design/LUA_API_SPEC.md` for complete API specification.**
+
+### Files Modified
+
+**Created**:
+- `vendor/lua-5.4.8/` (79 files) - Complete Lua 5.4.8 source
+- `src/scripting/lua_c.zig` (~200 lines) - Raw C API bindings
+- `src/scripting/lua_vm.zig` (~170 lines, 5 tests) - Zig wrapper
+
+**Modified**:
+- `build.zig` - Added Lua C source compilation (lines 38-80, 123-163)
+- `build.zig.zon` - Removed ziglua dependency
+- `SESSION_STATE.md` - Updated with Phase 2 progress
+- `CONTEXT_HANDOFF_PROTOCOL.md` - Added this handoff entry
+
+### Agents Used
+**None** - Direct implementation was appropriate for Lua integration task
+
+### Notes
+
+**Session Success**:
+Major milestone achieved! Lua 5.4 fully integrated with custom raw C bindings. Build system working perfectly. Tests passing. Ready to expose game APIs to Lua.
+
+**Challenges Overcome**:
+1. **ziglua Blocker**: Initial attempt to use ziglua hit incompatibility with Zig 0.15.1. Quick pivot to raw C bindings resolved the issue completely.
+2. **Zig 0.15.1 API Changes**: Had to use Lua C source directly instead of addStaticLibrary (which doesn't exist in 0.15.1). Solution: add C files to executable directly.
+3. **Working Directory Issues**: Bash commands reset cwd. Solution: use full paths with --build-file flag.
+
+**What Went Well**:
+- Raw C bindings approach proved excellent (full control, no dependencies)
+- Lua 5.4.8 integration smooth (well-documented C API)
+- Build system stable (~3 second builds)
+- Test-driven development caught issues early
+- Decision to vendor source code eliminates system dependencies
+
+**Lessons Learned**:
+1. Raw C bindings can be better than wrappers for cutting-edge Zig versions
+2. Vendoring dependencies provides hermetic, reproducible builds
+3. Lua C API is straightforward and well-documented
+4. Test early and often (caught several edge cases in tests)
+5. User involvement in key decisions (raw C bindings) was correct call
+
+**Time Spent**:
+- ziglua debugging: ~20 tool calls
+- Raw C bindings implementation: ~30 tool calls
+- Lua VM wrapper + tests: ~25 tool calls
+- Build system configuration: ~15 tool calls
+- Documentation updates: ~20 tool calls
+- Total: ~110 tool calls in single session
+
+**Phase 2 Velocity**:
+30% complete after 1 session. Excellent progress. Foundation is rock-solid. Next session can focus purely on game API (no infrastructure work needed).
+
+**Technical Quality**:
+- Zero memory leaks (test allocator verified)
+- 100% test pass rate
+- Clean separation: lua_c.zig (low-level) / lua_vm.zig (high-level)
+- Proper error handling with Zig error types
+- Memory-safe string handling with allocators
+
+**Ready for Next Session**:
+With Lua VM complete and tested, next session can immediately begin exposing entity/world APIs to Lua scripts. No infrastructure blockers remaining.
+
+**Phase 1 → Phase 2 Transition**: ✅ COMPLETE
+
+---
+
 ## Archive of Older Sessions
 
 (Future sessions will be archived here after 10-15 entries to keep recent history readable)
