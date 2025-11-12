@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Tech Stack**: Zig (engine) + Lua 5.4 (player scripts) + Raylib (rendering)
 
-**Current Phase**: Phase 1 (Core Engine) at 70% Complete - See `SESSION_STATE.md` for exact status
+**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 30% - See `SESSION_STATE.md` for exact status
 
 **Repository**: https://github.com/TBick/zig_game
 
@@ -142,7 +142,7 @@ When you run a Windows .exe from WSL2, it automatically uses Windows graphics, w
 **Custom Install Directory:**
 The `-Dinstall-dir` option installs to BOTH the default location (`zig-out/bin/`) AND your custom directory. This way you can test with `zig build run` and also have the binary in your preferred location.
 
-**Note**: Build system created and fully functional. Phase 1 (Core Engine) at 70% complete with 104 passing tests.
+**Note**: Build system created and fully functional. Phase 1 Complete (100%), Phase 2 at 30% with 109 passing tests.
 
 ---
 
@@ -191,14 +191,14 @@ zig_game/
 │   ├── structures/               # Buildings and construction (Phase 3)
 │   └── utils/                    # Utility functions
 │
-├── tests/                        # Test files (104 passing tests)
+├── tests/                        # Test files (109 passing tests)
 ├── scripts/                      # Example Lua scripts for players (Phase 2+)
 ├── assets/                       # Sprites, textures, etc. (Phase 4+)
 ├── build.zig                     # Build configuration (fully functional)
 └── build.zig.zon                 # Dependencies (Raylib, ziglua)
 ```
 
-**Current State**: Phase 1 at 70% complete. All core systems implemented with comprehensive test coverage.
+**Current State**: Phase 1 Complete (100%), Phase 2 at 30%. All core systems implemented with comprehensive test coverage.
 
 ---
 
@@ -252,13 +252,13 @@ Render (60 FPS) ←────────────────────�
 
 We're building this in 6 phases:
 - **Phase 0**: Project setup (build system, tooling, structure) ✅ **COMPLETE**
-- **Phase 1**: Core engine (hex grid, entities, rendering, tick system) 🔄 **70% COMPLETE**
+- **Phase 1**: Core engine (hex grid, entities, rendering, tick system) ✅ **COMPLETE**
 - **Phase 2**: Lua integration (VM, API, sandboxing) ⏳ **NEXT**
 - **Phase 3**: Gameplay (resources, construction, pathfinding)
 - **Phase 4**: UI and editor (in-game code editor, panels)
 - **Phase 5**: Content and polish (tech tree, scenarios, visuals)
 
-**Current Status**: Phase 1 at 70%, 104 tests passing, ready for Phase 2. See `SESSION_STATE.md` for details.
+**Current Status**: Phase 1 Complete (100%), Phase 2 at 30%, 109 tests passing. See `SESSION_STATE.md` for details.
 
 ### Testing Requirements
 
@@ -589,6 +589,6 @@ git push
 
 ---
 
-**CLAUDE.md Version**: 1.1
-**Last Updated**: 2025-11-11 (Session 4)
-**Next Review**: After Phase 1 completion (before Phase 2 begins)
+**CLAUDE.md Version**: 1.2
+**Last Updated**: 2025-11-12 (Session 6)
+**Next Review**: After Phase 2 completion (before Phase 3 begins)
