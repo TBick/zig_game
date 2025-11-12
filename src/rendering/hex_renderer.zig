@@ -83,6 +83,22 @@ pub const HexLayout = struct {
         }
     }
 
+    /// Convert pixel position to hex coordinate (inverse of hexToPixel)
+    /// Returns the hex coordinate closest to the given pixel position
+    pub fn pixelToHex(self: HexLayout, pixel: rl.Vector2) HexCoord {
+        if (self.orientation) {
+            // Flat-top orientation (inverse transformation)
+            const q = (2.0 / 3.0 * pixel.x) / self.size;
+            const r = (-1.0 / 3.0 * pixel.x + std.math.sqrt(3.0) / 3.0 * pixel.y) / self.size;
+            return HexCoord.fromFloat(q, r);
+        } else {
+            // Pointy-top orientation (inverse transformation)
+            const q = (std.math.sqrt(3.0) / 3.0 * pixel.x - 1.0 / 3.0 * pixel.y) / self.size;
+            const r = (2.0 / 3.0 * pixel.y) / self.size;
+            return HexCoord.fromFloat(q, r);
+        }
+    }
+
     /// Get the 6 corner points of a hexagon
     pub fn hexCorners(self: HexLayout, hex: HexCoord) [6]rl.Vector2 {
         const center = self.hexToPixel(hex);
@@ -217,5 +233,260 @@ test "HexLayout hex corners" {
     for (corners) |corner| {
         const dist = @sqrt(corner.x * corner.x + corner.y * corner.y);
         try std.testing.expect(@abs(dist - 30.0) < 0.1);
+    }
+}
+
+test "Camera screenToWorld conversion" {
+    const cam = Camera.init();
+    const screen_w = 800;
+    const screen_h = 600;
+
+    // Center of screen should map to world origin
+    const world_pos = cam.screenToWorld(400.0, 300.0, screen_w, screen_h);
+    try std.testing.expectEqual(@as(f32, 0.0), world_pos.x);
+    try std.testing.expectEqual(@as(f32, 0.0), world_pos.y);
+}
+
+test "Camera worldToScreen and screenToWorld roundtrip" {
+    const cam = Camera.init();
+    const screen_w = 800;
+    const screen_h = 600;
+
+    const world_x: f32 = 100.0;
+    const world_y: f32 = 200.0;
+
+    const screen_pos = cam.worldToScreen(world_x, world_y, screen_w, screen_h);
+    const world_pos = cam.screenToWorld(screen_pos.x, screen_pos.y, screen_w, screen_h);
+
+    try std.testing.expectApproxEqAbs(world_x, world_pos.x, 0.01);
+    try std.testing.expectApproxEqAbs(world_y, world_pos.y, 0.01);
+}
+
+test "Camera worldToScreen with panned camera" {
+    var cam = Camera.init();
+    cam.x = 100.0;
+    cam.y = 50.0;
+    const screen_w = 800;
+    const screen_h = 600;
+
+    // World position 100,50 should be at screen center (since camera is there)
+    const screen_pos = cam.worldToScreen(100.0, 50.0, screen_w, screen_h);
+    try std.testing.expectEqual(@as(f32, 400.0), screen_pos.x);
+    try std.testing.expectEqual(@as(f32, 300.0), screen_pos.y);
+}
+
+test "Camera worldToScreen with zoomed camera" {
+    var cam = Camera.init();
+    cam.zoom = 2.0;
+    const screen_w = 800;
+    const screen_h = 600;
+
+    // At 2x zoom, world position 50,0 should appear at 50*2 + 400 = 500
+    const screen_pos = cam.worldToScreen(50.0, 0.0, screen_w, screen_h);
+    try std.testing.expectEqual(@as(f32, 500.0), screen_pos.x);
+    try std.testing.expectEqual(@as(f32, 300.0), screen_pos.y);
+}
+
+test "Camera zoom clamping at maximum" {
+    var cam = Camera.init();
+    cam.zoom = 4.0;
+    cam.zoomBy(2.0); // Would be 8.0, but should clamp to 5.0
+    try std.testing.expectEqual(@as(f32, 5.0), cam.zoom);
+}
+
+test "Camera pan compensates for zoom" {
+    var cam = Camera.init();
+    cam.zoom = 2.0;
+
+    // Pan by 100 pixels (screen space)
+    cam.pan(100.0, 0.0);
+
+    // With 2x zoom, 100 screen pixels = 50 world units
+    try std.testing.expectEqual(@as(f32, 50.0), cam.x);
+    try std.testing.expectEqual(@as(f32, 0.0), cam.y);
+}
+
+test "HexLayout hexToPixel with non-origin coordinates" {
+    const layout = HexLayout.init(30.0, true);
+    const hex1 = HexCoord.init(1, 0);
+    const hex2 = HexCoord.init(0, 1);
+
+    const pixel1 = layout.hexToPixel(hex1);
+    const pixel2 = layout.hexToPixel(hex2);
+
+    // Verify pixels are not at origin
+    try std.testing.expect(pixel1.x != 0.0 or pixel1.y != 0.0);
+    try std.testing.expect(pixel2.x != 0.0 or pixel2.y != 0.0);
+
+    // Verify they're different from each other
+    try std.testing.expect(pixel1.x != pixel2.x or pixel1.y != pixel2.y);
+}
+
+test "HexLayout pointy-top orientation" {
+    const flat_layout = HexLayout.init(30.0, true);
+    const pointy_layout = HexLayout.init(30.0, false);
+
+    const hex = HexCoord.init(1, 1);
+    const flat_pixel = flat_layout.hexToPixel(hex);
+    const pointy_pixel = pointy_layout.hexToPixel(hex);
+
+    // Pointy and flat should give different results
+    try std.testing.expect(flat_pixel.x != pointy_pixel.x or flat_pixel.y != pointy_pixel.y);
+}
+
+test "HexLayout hexCorners for pointy-top" {
+    const layout = HexLayout.init(30.0, false); // Pointy-top
+    const hex = HexCoord.init(0, 0);
+    const corners = layout.hexCorners(hex);
+
+    try std.testing.expectEqual(@as(usize, 6), corners.len);
+    // All corners should be at radius distance from center
+    for (corners) |corner| {
+        const dist = @sqrt(corner.x * corner.x + corner.y * corner.y);
+        try std.testing.expect(@abs(dist - 30.0) < 0.1);
+    }
+}
+
+test "Camera with extreme coordinates" {
+    var cam = Camera.init();
+    cam.x = 10000.0;
+    cam.y = -10000.0;
+    const screen_w = 800;
+    const screen_h = 600;
+
+    const screen_pos = cam.worldToScreen(10000.0, -10000.0, screen_w, screen_h);
+    try std.testing.expectEqual(@as(f32, 400.0), screen_pos.x);
+    try std.testing.expectEqual(@as(f32, 300.0), screen_pos.y);
+}
+
+test "HexLayout with different sizes" {
+    const small_layout = HexLayout.init(10.0, true);
+    const large_layout = HexLayout.init(100.0, true);
+
+    const hex = HexCoord.init(1, 0);
+    const small_pixel = small_layout.hexToPixel(hex);
+    const large_pixel = large_layout.hexToPixel(hex);
+
+    // Larger size should give larger distances
+    const small_dist = @sqrt(small_pixel.x * small_pixel.x + small_pixel.y * small_pixel.y);
+    const large_dist = @sqrt(large_pixel.x * large_pixel.x + large_pixel.y * large_pixel.y);
+
+    try std.testing.expect(large_dist > small_dist);
+}
+
+test "HexLayout.pixelToHex with origin" {
+    const layout = HexLayout.init(30.0, true);
+    const pixel = rl.Vector2{ .x = 0.0, .y = 0.0 };
+    const hex = layout.pixelToHex(pixel);
+
+    // Origin pixel should map to origin hex
+    try std.testing.expectEqual(@as(i32, 0), hex.q);
+    try std.testing.expectEqual(@as(i32, 0), hex.r);
+}
+
+test "HexLayout.hexToPixel and pixelToHex roundtrip (flat-top)" {
+    const layout = HexLayout.init(30.0, true);
+
+    // Test several hex coordinates
+    const test_coords = [_]HexCoord{
+        HexCoord.init(0, 0),
+        HexCoord.init(1, 0),
+        HexCoord.init(0, 1),
+        HexCoord.init(1, 1),
+        HexCoord.init(-1, 0),
+        HexCoord.init(0, -1),
+        HexCoord.init(5, 5),
+        HexCoord.init(-3, 2),
+    };
+
+    for (test_coords) |original_hex| {
+        const pixel = layout.hexToPixel(original_hex);
+        const result_hex = layout.pixelToHex(pixel);
+
+        // Roundtrip should return to original coordinate
+        try std.testing.expectEqual(original_hex.q, result_hex.q);
+        try std.testing.expectEqual(original_hex.r, result_hex.r);
+    }
+}
+
+test "HexLayout.hexToPixel and pixelToHex roundtrip (pointy-top)" {
+    const layout = HexLayout.init(30.0, false); // Pointy-top
+
+    const test_coords = [_]HexCoord{
+        HexCoord.init(0, 0),
+        HexCoord.init(1, 0),
+        HexCoord.init(0, 1),
+        HexCoord.init(2, 3),
+        HexCoord.init(-2, -3),
+    };
+
+    for (test_coords) |original_hex| {
+        const pixel = layout.hexToPixel(original_hex);
+        const result_hex = layout.pixelToHex(pixel);
+
+        try std.testing.expectEqual(original_hex.q, result_hex.q);
+        try std.testing.expectEqual(original_hex.r, result_hex.r);
+    }
+}
+
+test "HexLayout.pixelToHex with different hex sizes" {
+    const small_layout = HexLayout.init(10.0, true);
+    const large_layout = HexLayout.init(50.0, true);
+
+    const hex = HexCoord.init(3, 2);
+
+    // Convert to pixels with different sizes
+    const small_pixel = small_layout.hexToPixel(hex);
+    const large_pixel = large_layout.hexToPixel(hex);
+
+    // Convert back to hex
+    const small_result = small_layout.pixelToHex(small_pixel);
+    const large_result = large_layout.pixelToHex(large_pixel);
+
+    // Both should roundtrip correctly despite different sizes
+    try std.testing.expectEqual(hex.q, small_result.q);
+    try std.testing.expectEqual(hex.r, small_result.r);
+    try std.testing.expectEqual(hex.q, large_result.q);
+    try std.testing.expectEqual(hex.r, large_result.r);
+}
+
+test "HexLayout.pixelToHex at hex boundaries" {
+    const layout = HexLayout.init(30.0, true);
+    const hex = HexCoord.init(1, 1);
+
+    // Get the center pixel of this hex
+    const center = layout.hexToPixel(hex);
+
+    // Points slightly offset from center should still map to same hex
+    const offsets = [_]rl.Vector2{
+        rl.Vector2{ .x = center.x + 5.0, .y = center.y },
+        rl.Vector2{ .x = center.x - 5.0, .y = center.y },
+        rl.Vector2{ .x = center.x, .y = center.y + 5.0 },
+        rl.Vector2{ .x = center.x, .y = center.y - 5.0 },
+    };
+
+    for (offsets) |offset_pixel| {
+        const result = layout.pixelToHex(offset_pixel);
+        // Small offsets from center should still be in the same hex
+        try std.testing.expectEqual(hex.q, result.q);
+        try std.testing.expectEqual(hex.r, result.r);
+    }
+}
+
+test "HexLayout.pixelToHex with negative coordinates" {
+    const layout = HexLayout.init(30.0, true);
+
+    const test_hexes = [_]HexCoord{
+        HexCoord.init(-5, 3),
+        HexCoord.init(3, -5),
+        HexCoord.init(-2, -2),
+    };
+
+    for (test_hexes) |hex| {
+        const pixel = layout.hexToPixel(hex);
+        const result = layout.pixelToHex(pixel);
+
+        try std.testing.expectEqual(hex.q, result.q);
+        try std.testing.expectEqual(hex.r, result.r);
     }
 }

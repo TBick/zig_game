@@ -4,6 +4,32 @@ const HexGrid = @import("world/hex_grid.zig").HexGrid;
 const HexRenderer = @import("rendering/hex_renderer.zig").HexRenderer;
 const DebugOverlay = @import("ui/debug_overlay.zig").DebugOverlay;
 
+// Entity system imports
+const Entity = @import("entities/entity.zig").Entity;
+const EntityId = @import("entities/entity.zig").EntityId;
+const EntityRole = @import("entities/entity.zig").EntityRole;
+const EntityManager = @import("entities/entity_manager.zig").EntityManager;
+const EntityRenderer = @import("rendering/entity_renderer.zig").EntityRenderer;
+const HexCoord = @import("world/hex_grid.zig").HexCoord;
+
+// Core system imports
+const TickScheduler = @import("core/tick_scheduler.zig").TickScheduler;
+
+// Input and UI imports
+const EntitySelector = @import("input/entity_selector.zig").EntitySelector;
+const EntityInfoPanel = @import("ui/entity_info_panel.zig").EntityInfoPanel;
+
+// Test discovery: Ensure all module tests are included
+test {
+    std.testing.refAllDecls(@This());
+    std.testing.refAllDecls(@import("entities/entity.zig"));
+    std.testing.refAllDecls(@import("entities/entity_manager.zig"));
+    std.testing.refAllDecls(@import("rendering/entity_renderer.zig"));
+    std.testing.refAllDecls(@import("core/tick_scheduler.zig"));
+    std.testing.refAllDecls(@import("input/entity_selector.zig"));
+    std.testing.refAllDecls(@import("ui/entity_info_panel.zig"));
+}
+
 pub fn main() !void {
     // Enable VSync before window initialization to prevent screen tearing
     rl.setConfigFlags(rl.ConfigFlags{ .vsync_hint = true });
@@ -35,64 +61,97 @@ pub fn main() !void {
     // Create a 10x10 hex grid
     try grid.createRect(10, 10);
 
-    // Initialize renderer
-    var renderer = HexRenderer.init(30.0); // 30 pixel hex size
+    // Initialize renderers
+    var hex_renderer = HexRenderer.init(30.0); // 30 pixel hex size
+    var entity_renderer = EntityRenderer.init(12.0); // 12 pixel entity radius
+
+    // Initialize entity manager
+    var entity_manager = EntityManager.init(allocator);
+    defer entity_manager.deinit();
+
+    // Spawn some test entities
+    _ = try entity_manager.spawn(HexCoord{ .q = 2, .r = 2 }, .worker);
+    _ = try entity_manager.spawn(HexCoord{ .q = 5, .r = 3 }, .combat);
+    _ = try entity_manager.spawn(HexCoord{ .q = 7, .r = 5 }, .scout);
+    _ = try entity_manager.spawn(HexCoord{ .q = 3, .r = 7 }, .engineer);
+
+    // Initialize tick scheduler (2.5 ticks per second)
+    var tick_scheduler = TickScheduler.init(2.5);
 
     // Initialize debug overlay
     var debug_overlay = DebugOverlay.init();
+
+    // Initialize entity selection system
+    var entity_selector = EntitySelector.init();
+    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
 
     // Camera controls
     var last_mouse_pos = rl.getMousePosition();
 
     // Main game loop
     while (!rl.windowShouldClose()) {
-        // Update
+        // ====================================================================
+        // TICK PROCESSING (Game Logic at Fixed Rate)
+        // ====================================================================
+
+        const frame_time = rl.getFrameTime();
+        const ticks_to_process = tick_scheduler.update(@floatCast(frame_time));
+
+        // Process each tick (game logic runs at fixed rate)
+        var i: u32 = 0;
+        while (i < ticks_to_process) : (i += 1) {
+            processTick(&entity_manager, &tick_scheduler);
+        }
+
+        // ====================================================================
+        // INPUT & CAMERA (Runs every frame for smooth response)
+        // ====================================================================
+
         const mouse_pos = rl.getMousePosition();
 
         // Camera panning (right mouse button for drag)
         if (rl.isMouseButtonDown(rl.MouseButton.right)) {
             const dx = mouse_pos.x - last_mouse_pos.x;
             const dy = mouse_pos.y - last_mouse_pos.y;
-            renderer.camera.pan(-dx, -dy);
+            hex_renderer.camera.pan(-dx, -dy);
         }
 
         // Camera zoom (mouse wheel)
         const wheel = rl.getMouseWheelMove();
         if (wheel != 0) {
             const zoom_factor: f32 = if (wheel > 0) 1.1 else 0.9;
-            renderer.camera.zoomBy(zoom_factor);
+            hex_renderer.camera.zoomBy(zoom_factor);
         }
 
         // Keyboard camera controls
         // Scale by delta time for frame-rate independence
         const base_speed = 400.0; // pixels per second
-        const frame_time = rl.getFrameTime();
-        const pan_speed = base_speed * frame_time;
+        const pan_speed = base_speed * @as(f32, @floatCast(frame_time));
 
         if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
-            renderer.camera.pan(-pan_speed, 0);
+            hex_renderer.camera.pan(-pan_speed, 0);
         }
         if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
-            renderer.camera.pan(pan_speed, 0);
+            hex_renderer.camera.pan(pan_speed, 0);
         }
         if (rl.isKeyDown(rl.KeyboardKey.up) or rl.isKeyDown(rl.KeyboardKey.w)) {
-            renderer.camera.pan(0, -pan_speed);
+            hex_renderer.camera.pan(0, -pan_speed);
         }
         if (rl.isKeyDown(rl.KeyboardKey.down) or rl.isKeyDown(rl.KeyboardKey.s)) {
-            renderer.camera.pan(0, pan_speed);
+            hex_renderer.camera.pan(0, pan_speed);
         }
 
         // Keyboard zoom
         if (rl.isKeyDown(rl.KeyboardKey.equal) or rl.isKeyDown(rl.KeyboardKey.kp_add)) {
-            renderer.camera.zoomBy(1.02);
+            hex_renderer.camera.zoomBy(1.02);
         }
         if (rl.isKeyDown(rl.KeyboardKey.minus) or rl.isKeyDown(rl.KeyboardKey.kp_subtract)) {
-            renderer.camera.zoomBy(0.98);
+            hex_renderer.camera.zoomBy(0.98);
         }
 
         // Reset camera
         if (rl.isKeyPressed(rl.KeyboardKey.r)) {
-            renderer.camera = @import("rendering/hex_renderer.zig").Camera.init();
+            hex_renderer.camera = @import("rendering/hex_renderer.zig").Camera.init();
         }
 
         // Toggle debug overlay with F3
@@ -103,43 +162,101 @@ pub fn main() !void {
         // Update debug overlay
         debug_overlay.update();
 
+        // ====================================================================
+        // ENTITY SELECTION (Mouse click to select entities)
+        // ====================================================================
+
+        // Get current window dimensions for coordinate transformations
+        const current_width = rl.getScreenWidth();
+        const current_height = rl.getScreenHeight();
+
+        // Update entity selection based on mouse input
+        entity_selector.update(
+            mouse_pos,
+            rl.isMouseButtonPressed(rl.MouseButton.left),
+            &entity_manager,
+            &hex_renderer.camera,
+            &hex_renderer.layout,
+            current_width,
+            current_height,
+        );
+
         last_mouse_pos = mouse_pos;
 
-        // Draw
+        // ====================================================================
+        // RENDERING (Runs every frame at 60 FPS)
+        // ====================================================================
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.init(30, 30, 40, 255));
 
-        // Get current window dimensions (in case of resize)
-        const current_width = rl.getScreenWidth();
-        const current_height = rl.getScreenHeight();
-
         // Draw hex grid
-        renderer.drawGrid(&grid, current_width, current_height);
+        hex_renderer.drawGrid(&grid, current_width, current_height);
+
+        // Draw entities with selection highlighting
+        const selected_entity = entity_selector.getSelected(&entity_manager);
+        for (entity_manager.getAliveEntities()) |*entity| {
+            const is_selected = if (selected_entity) |sel| sel.id == entity.id else false;
+            entity_renderer.drawEntityWithSelection(
+                entity,
+                is_selected,
+                &hex_renderer.camera,
+                &hex_renderer.layout,
+                current_width,
+                current_height,
+            );
+        }
 
         // Draw UI
-        rl.drawText("Zig Game - Phase 1: Hex Grid", 10, 180, 20, rl.Color.ray_white);
-        rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 210, 14, rl.Color.light_gray);
+        rl.drawText("Zig Game - Phase 1: Entity Selection", 10, 180, 20, rl.Color.ray_white);
+        rl.drawText("Left Click: Select Entity  |  Right Drag: Pan  |  Wheel/+/-: Zoom", 10, 210, 14, rl.Color.light_gray);
+        rl.drawText("WASD/Arrows: Pan  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 230, 14, rl.Color.light_gray);
 
         // Draw camera info
-        const cam_y = current_height - 60;
+        const cam_y = current_height - 80;
         var buf: [100:0]u8 = undefined;
         const info = std.fmt.bufPrintZ(&buf, "Camera: ({d:.0}, {d:.0}) Zoom: {d:.2}x", .{
-            renderer.camera.x,
-            renderer.camera.y,
-            renderer.camera.zoom,
+            hex_renderer.camera.x,
+            hex_renderer.camera.y,
+            hex_renderer.camera.zoom,
         }) catch "Error";
         rl.drawText(info, 10, cam_y, 14, rl.Color.green);
 
-        // Draw tile count
+        // Draw entity and tile count
         var buf2: [100:0]u8 = undefined;
-        const count_text = std.fmt.bufPrintZ(&buf2, "Tiles: {d}", .{grid.count()}) catch "Error";
+        const count_text = std.fmt.bufPrintZ(&buf2, "Entities: {d}  Tiles: {d}", .{
+            entity_manager.getAliveCount(),
+            grid.count(),
+        }) catch "Error";
         rl.drawText(count_text, 10, cam_y + 20, 14, rl.Color.green);
 
-        // Draw debug overlay (uses entity count = tile count for now, tick_rate = null)
-        debug_overlay.draw(grid.count(), null);
+        // Draw tick info
+        var buf3: [100:0]u8 = undefined;
+        const tick_text = std.fmt.bufPrintZ(&buf3, "Tick: {d}  Rate: {d:.1} tps", .{
+            tick_scheduler.getCurrentTick(),
+            tick_scheduler.getTickRate(),
+        }) catch "Error";
+        rl.drawText(tick_text, 10, cam_y + 40, 14, rl.Color.green);
+
+        // Draw debug overlay
+        debug_overlay.draw(entity_manager.getAliveCount(), @floatCast(tick_scheduler.getTickRate()));
+
+        // Draw entity info panel
+        info_panel.draw(selected_entity, tick_scheduler.getCurrentTick());
     }
+}
+
+/// Process one tick of game logic
+fn processTick(entity_manager: *EntityManager, tick_scheduler: *TickScheduler) void {
+    _ = entity_manager;
+    _ = tick_scheduler;
+
+    // TODO: Implement game logic here
+    // - Execute Lua scripts for entities
+    // - Process entity actions
+    // - Update world state
+    // - Handle resource distribution
 }
 
 test "basic functionality" {

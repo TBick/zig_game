@@ -67,8 +67,14 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "raylib", .module = raylib },
+            },
         }),
     });
+
+    // Link raylib to test target
+    exe_unit_tests.linkLibrary(raylib_artifact);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
