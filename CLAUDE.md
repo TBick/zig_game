@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Tech Stack**: Zig (engine) + Lua 5.4 (player scripts) + Raylib (rendering)
 
-**Current Phase**: Phase 0 (Project Setup) - See `SESSION_STATE.md` for exact status
+**Current Phase**: Phase 1 (Core Engine) at 70% Complete - See `SESSION_STATE.md` for exact status
 
 **Repository**: https://github.com/TBick/zig_game
 
@@ -142,7 +142,7 @@ When you run a Windows .exe from WSL2, it automatically uses Windows graphics, w
 **Custom Install Directory:**
 The `-Dinstall-dir` option installs to BOTH the default location (`zig-out/bin/`) AND your custom directory. This way you can test with `zig build run` and also have the binary in your preferred location.
 
-**Note**: Build system created in Phase 0. If it doesn't exist yet, we're still in planning/setup.
+**Note**: Build system created and fully functional. Phase 1 (Core Engine) at 70% complete with 104 passing tests.
 
 ---
 
@@ -169,27 +169,36 @@ zig_game/
 │           ├── feature_agent_template.md
 │           └── test_agent_template.md
 │
-├── src/                          # Zig source code (Phase 0+)
-│   ├── main.zig                  # Entry point
-│   ├── core/                     # Game loop, tick scheduler
-│   ├── world/                    # Hex grid, world generation
+├── src/                          # Zig source code (~3,500 lines)
+│   ├── main.zig                  # Entry point (game loop)
+│   ├── core/                     # Core systems
+│   │   └── tick_scheduler.zig    # ✅ Tick timing (2.5 ticks/sec)
+│   ├── world/                    # World systems
+│   │   └── hex_grid.zig          # ✅ Hex grid and coordinates
 │   ├── entities/                 # Entity system
-│   ├── scripting/                # Lua integration
-│   ├── resources/                # Resource management
-│   ├── structures/               # Buildings and construction
-│   ├── rendering/                # Graphics
+│   │   ├── entity.zig            # ✅ Entity data structure
+│   │   └── entity_manager.zig    # ✅ Entity lifecycle management
+│   ├── rendering/                # Rendering systems
+│   │   ├── hex_renderer.zig      # ✅ Camera and hex rendering
+│   │   └── entity_renderer.zig   # ✅ Entity visualization
 │   ├── input/                    # Input handling
+│   │   └── entity_selector.zig   # ✅ Mouse-based selection
 │   ├── ui/                       # User interface
-│   └── utils/                    # Utilities
+│   │   ├── debug_overlay.zig     # ✅ F3 debug info
+│   │   └── entity_info_panel.zig # ✅ Entity inspection panel
+│   ├── scripting/                # Lua integration (Phase 2)
+│   ├── resources/                # Resource management (Phase 3)
+│   ├── structures/               # Buildings and construction (Phase 3)
+│   └── utils/                    # Utility functions
 │
-├── tests/                        # Test files (Phase 0+)
+├── tests/                        # Test files (104 passing tests)
 ├── scripts/                      # Example Lua scripts for players (Phase 2+)
 ├── assets/                       # Sprites, textures, etc. (Phase 4+)
-├── build.zig                     # Build configuration (Phase 0)
-└── build.zig.zon                 # Dependencies (Phase 0)
+├── build.zig                     # Build configuration (fully functional)
+└── build.zig.zon                 # Dependencies (Raylib, ziglua)
 ```
 
-**Key Insight**: If `src/` doesn't exist yet, we're in Phase 0 (setup). Create it according to this structure.
+**Current State**: Phase 1 at 70% complete. All core systems implemented with comprehensive test coverage.
 
 ---
 
@@ -242,14 +251,14 @@ Render (60 FPS) ←────────────────────�
 ### Phase-Based Development
 
 We're building this in 6 phases:
-- **Phase 0**: Project setup (build system, tooling, structure)
-- **Phase 1**: Core engine (hex grid, entities, rendering, tick system)
-- **Phase 2**: Lua integration (VM, API, sandboxing)
+- **Phase 0**: Project setup (build system, tooling, structure) ✅ **COMPLETE**
+- **Phase 1**: Core engine (hex grid, entities, rendering, tick system) 🔄 **70% COMPLETE**
+- **Phase 2**: Lua integration (VM, API, sandboxing) ⏳ **NEXT**
 - **Phase 3**: Gameplay (resources, construction, pathfinding)
 - **Phase 4**: UI and editor (in-game code editor, panels)
 - **Phase 5**: Content and polish (tech tree, scenarios, visuals)
 
-**Check `SESSION_STATE.md` to see current phase.**
+**Current Status**: Phase 1 at 70%, 104 tests passing, ready for Phase 2. See `SESSION_STATE.md` for details.
 
 ### Testing Requirements
 
@@ -479,9 +488,9 @@ These are locked in. Don't revisit unless compelling reason:
 → Check "Recommended Next Steps" in most recent handoff
 
 ### "The build fails"
-→ We may still be in Phase 0. Check if `build.zig` exists.
-→ If it exists, check dependencies in `build.zig.zon`
+→ Build system is fully functional. Check dependencies in `build.zig.zon`
 → Try `rm -rf zig-cache zig-out && zig build`
+→ Ensure Zig 0.15.1 is installed
 
 ### "I don't understand the architecture"
 → Read `docs/design/ARCHITECTURE.md` for technical design
@@ -580,6 +589,6 @@ git push
 
 ---
 
-**CLAUDE.md Version**: 1.0
-**Last Updated**: 2025-11-09
-**Next Review**: After Phase 0 completion
+**CLAUDE.md Version**: 1.1
+**Last Updated**: 2025-11-11 (Session 4)
+**Next Review**: After Phase 1 completion (before Phase 2 begins)

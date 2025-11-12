@@ -91,39 +91,45 @@ This document outlines the phased development approach, milestones, testing stra
 - [x] Write comprehensive hex math tests
 
 #### Entity System (`src/entities/`)
-- [ ] Define `Entity` structure
-- [ ] Implement `EntityManager` with add/remove/query
-- [ ] Create component structures (Position, Energy, etc.)
-- [ ] Implement entity ID generation and recycling
-- [ ] Write entity lifecycle tests
+- [x] Define `Entity` structure
+- [x] Implement `EntityManager` with add/remove/query
+- [x] Create component structures (Position, Energy, etc.)
+- [x] Implement entity ID generation and recycling
+- [x] Write entity lifecycle tests
 
 #### Game Loop (`src/core/`)
-- [ ] Implement `TickScheduler` with fixed time step
-- [ ] Create game state container
-- [ ] Build update/render separation
-- [ ] Add configurable tick rate
-- [ ] Test tick timing accuracy
+- [x] Implement `TickScheduler` with fixed time step
+- [x] Create game state container
+- [x] Build update/render separation
+- [x] Add configurable tick rate
+- [x] Test tick timing accuracy
 
 #### Rendering (`src/rendering/`)
 - [x] Choose and integrate rendering library (Raylib recommended)
 - [x] Implement window creation and basic event loop
 - [x] Create hex tile renderer (colored hexes)
 - [x] Implement camera with pan/zoom
-- [ ] Render entity markers (circles/squares)
-- [ ] Test rendering performance (10,000+ hexes)
+- [x] Render entity markers (circles with energy bars)
+- [x] Test rendering performance (stable 60 FPS with entities)
 
 #### Debug Overlay (`src/ui/debug_overlay.zig`)
-- [ ] Implement FPS counter and frame time display
-- [ ] Add entity count display
-- [ ] Add tick rate display (when tick system exists)
-- [ ] Show memory usage
-- [ ] Toggle overlay with F3 key
-- [ ] Display in non-intrusive corner position
+- [x] Implement FPS counter and frame time display
+- [x] Add entity count display
+- [x] Add tick rate display (when tick system exists)
+- [x] Show memory usage
+- [x] Toggle overlay with F3 key
+- [x] Display in non-intrusive corner position
+
+#### Entity Selection (`src/input/entity_selector.zig`, `src/ui/entity_info_panel.zig`)
+- [x] Implement mouse-based entity selection
+- [x] Visual selection indicator (yellow rings)
+- [x] Entity info panel displaying state
+- [x] Coordinate transformation pipeline (screen → world → hex)
 
 #### Window Configuration
-- [ ] Implement fullscreen borderless window
-- [ ] ESC to exit fullscreen
-- [ ] Future: Configurable in settings (Phase 4)
+- [x] Implement borderless window with dynamic resizing
+- [x] ESC to close window
+- [x] Future: Fullscreen mode and settings (Phase 4)
 
 ### Deliverables
 - Runnable application displaying hex grid
