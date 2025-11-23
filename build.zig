@@ -35,6 +35,14 @@ pub fn build(b: *std.Build) void {
     // Link raylib
     exe.linkLibrary(raylib_artifact);
 
+    // Determine Lua platform define based on target OS
+    const lua_platform_define = switch (target.result.os.tag) {
+        .windows => "-DLUA_USE_WINDOWS",
+        .linux => "-DLUA_USE_LINUX",
+        .macos => "-DLUA_USE_MACOSX",
+        else => "-DLUA_USE_POSIX",
+    };
+
     // Add Lua 5.4 C source files directly
     exe.addCSourceFiles(.{
         .files = &.{
@@ -73,7 +81,7 @@ pub fn build(b: *std.Build) void {
         },
         .flags = &.{
             "-std=c99",
-            "-DLUA_USE_LINUX",
+            lua_platform_define,
         },
     });
     exe.addIncludePath(b.path("vendor/lua-5.4.8/src"));
@@ -120,7 +128,7 @@ pub fn build(b: *std.Build) void {
     // Link raylib to test target
     exe_unit_tests.linkLibrary(raylib_artifact);
 
-    // Add Lua 5.4 C source files to tests
+    // Add Lua 5.4 C source files to tests (use same platform define as exe)
     exe_unit_tests.addCSourceFiles(.{
         .files = &.{
             "vendor/lua-5.4.8/src/lapi.c",
@@ -158,7 +166,7 @@ pub fn build(b: *std.Build) void {
         },
         .flags = &.{
             "-std=c99",
-            "-DLUA_USE_LINUX",
+            lua_platform_define,
         },
     });
     exe_unit_tests.addIncludePath(b.path("vendor/lua-5.4.8/src"));

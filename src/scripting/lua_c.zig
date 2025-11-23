@@ -127,6 +127,7 @@ extern fn lua_pushlstring(L: ?*lua_State, s: [*c]const u8, len: usize) [*c]const
 extern fn lua_pushstring(L: ?*lua_State, s: [*c]const u8) [*c]const u8;
 extern fn lua_pushcclosure(L: ?*lua_State, func: lua_CFunction, n: c_int) void;
 extern fn lua_pushboolean(L: ?*lua_State, b: c_int) void;
+extern fn lua_pushlightuserdata(L: ?*lua_State, p: ?*anyopaque) void;
 
 pub const pushNil = lua_pushnil;
 pub const pushNumber = lua_pushnumber;
@@ -134,6 +135,7 @@ pub const pushInteger = lua_pushinteger;
 pub const pushLString = lua_pushlstring;
 pub const pushString = lua_pushstring;
 pub const pushCClosure = lua_pushcclosure;
+pub const pushLightuserdata = lua_pushlightuserdata;
 
 pub fn pushBoolean(L: ?*lua_State, b: bool) void {
     lua_pushboolean(L, if (b) 1 else 0);
@@ -150,13 +152,26 @@ extern fn lua_gettable(L: ?*lua_State, idx: c_int) c_int;
 extern fn lua_settable(L: ?*lua_State, idx: c_int) void;
 extern fn lua_getfield(L: ?*lua_State, idx: c_int, k: [*c]const u8) c_int;
 extern fn lua_setfield(L: ?*lua_State, idx: c_int, k: [*c]const u8) void;
+extern fn lua_geti(L: ?*lua_State, idx: c_int, n: lua_Integer) c_int;
+extern fn lua_seti(L: ?*lua_State, idx: c_int, n: lua_Integer) void;
 
 pub const getGlobal = lua_getglobal;
 pub const setGlobal = lua_setglobal;
 pub const getTable = lua_gettable;
 pub const setTable = lua_settable;
-pub const getField = lua_getField;
+pub const getField = lua_getfield;
 pub const setField = lua_setfield;
+pub const getI = lua_geti;
+pub const setI = lua_seti;
+
+// === Table operations ===
+extern fn lua_createtable(L: ?*lua_State, narr: c_int, nrec: c_int) void;
+
+pub const createTable = lua_createtable;
+
+pub fn newTable(L: ?*lua_State) void {
+    lua_createtable(L, 0, 0);
+}
 
 // === Load and call functions ===
 extern fn luaL_loadstring(L: ?*lua_State, s: [*c]const u8) c_int;
