@@ -6,9 +6,14 @@ const lua = @import("lua_c.zig");
 const Entity = @import("../entities/entity.zig").Entity;
 const EntityRole = @import("../entities/entity.zig").EntityRole;
 const HexCoord = @import("../world/hex_grid.zig").HexCoord;
+const ActionQueue = @import("../core/action_queue.zig").ActionQueue;
+const EntityAction = @import("../core/action_queue.zig").EntityAction;
 
 /// Registry key for storing entity pointer
 const ENTITY_REGISTRY_KEY = "zig_entity_ptr";
+
+/// Registry key for storing action queue pointer
+const ACTION_QUEUE_REGISTRY_KEY = "zig_action_queue_ptr";
 
 // ============================================================================
 // Entity Context Management
@@ -73,6 +78,30 @@ fn getRoleString(role: EntityRole) []const u8 {
         .scout => "scout",
         .engineer => "engineer",
     };
+}
+
+// ============================================================================
+// Action Queue Context Management
+// ============================================================================
+
+/// Store action queue pointer in Lua registry for C functions to access
+pub fn setActionQueueContext(L: ?*lua.lua_State, queue: *ActionQueue) void {
+    lua.pushLightuserdata(L, queue);
+    lua.setField(L, lua.LUA_REGISTRYINDEX, ACTION_QUEUE_REGISTRY_KEY);
+}
+
+/// Retrieve action queue pointer from Lua registry
+/// Returns null if no action queue context is set
+pub fn getActionQueueContext(L: ?*lua.lua_State) ?*ActionQueue {
+    _ = lua.getField(L, lua.LUA_REGISTRYINDEX, ACTION_QUEUE_REGISTRY_KEY);
+    defer lua.pop(L, 1);
+
+    if (lua.isNoneOrNil(L, -1)) {
+        return null;
+    }
+
+    const ptr = lua.toUserdata(L, -1);
+    return @ptrCast(ptr);
 }
 
 // ============================================================================
@@ -173,6 +202,149 @@ pub fn lua_entity_isActive(L: ?*lua.lua_State) callconv(.C) c_int {
 }
 
 // ============================================================================
+// Entity Action Functions (Lua-callable C functions)
+// ============================================================================
+
+/// entity.moveTo(position) -> boolean
+/// Queue a move action to the target position
+/// Args: position table with {q, r}
+/// Returns: true if action queued successfully, false otherwise
+pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.C) c_int {
+    const queue = getActionQueueContext(L) orelse {
+        lua.pushBoolean(L, false);
+        return 1;
+    };
+
+    // Expect a table as first argument {q = ..., r = ...}
+    if (!lua.isTable(L, 1)) {
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+
+    // Get q value
+    _ = lua.getField(L, 1, "q");
+    if (!lua.isNumber(L, -1)) {
+        lua.pop(L, 1);
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+    const q: i32 = @intCast(lua.toInteger(L, -1));
+    lua.pop(L, 1);
+
+    // Get r value
+    _ = lua.getField(L, 1, "r");
+    if (!lua.isNumber(L, -1)) {
+        lua.pop(L, 1);
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+    const r: i32 = @intCast(lua.toInteger(L, -1));
+    lua.pop(L, 1);
+
+    // Create and queue the move action
+    const action = EntityAction{
+        .move = .{ .target = HexCoord{ .q = q, .r = r } },
+    };
+
+    queue.add(action) catch {
+        lua.pushBoolean(L, false);
+        return 1;
+    };
+
+    lua.pushBoolean(L, true);
+    return 1;
+}
+
+/// entity.harvest(position) -> boolean
+/// Queue a harvest action at the target position (Phase 3 - stub for now)
+/// Args: position table with {q, r}
+/// Returns: true if action queued successfully, false otherwise
+pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.C) c_int {
+    const queue = getActionQueueContext(L) orelse {
+        lua.pushBoolean(L, false);
+        return 1;
+    };
+
+    // Expect a table as first argument {q = ..., r = ...}
+    if (!lua.isTable(L, 1)) {
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+
+    // Get q value
+    _ = lua.getField(L, 1, "q");
+    if (!lua.isNumber(L, -1)) {
+        lua.pop(L, 1);
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+    const q: i32 = @intCast(lua.toInteger(L, -1));
+    lua.pop(L, 1);
+
+    // Get r value
+    _ = lua.getField(L, 1, "r");
+    if (!lua.isNumber(L, -1)) {
+        lua.pop(L, 1);
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+    const r: i32 = @intCast(lua.toInteger(L, -1));
+    lua.pop(L, 1);
+
+    // Create and queue the harvest action
+    const action = EntityAction{
+        .harvest = .{ .target = HexCoord{ .q = q, .r = r } },
+    };
+
+    queue.add(action) catch {
+        lua.pushBoolean(L, false);
+        return 1;
+    };
+
+    lua.pushBoolean(L, true);
+    return 1;
+}
+
+/// entity.consume(resource_type, amount) -> boolean
+/// Queue a consume action for resources (Phase 3 - stub for now)
+/// Args: resource_type (string), amount (number)
+/// Returns: true if action queued successfully, false otherwise
+pub fn lua_entity_consume(L: ?*lua.lua_State) callconv(.C) c_int {
+    const queue = getActionQueueContext(L) orelse {
+        lua.pushBoolean(L, false);
+        return 1;
+    };
+
+    // Expect string as first argument (resource type)
+    if (!lua.isString(L, 1)) {
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+
+    var len: usize = 0;
+    const resource_ptr = lua.toString(L, 1, &len);
+    const resource_type = resource_ptr[0..len];
+
+    // Expect number as second argument (amount)
+    if (!lua.isNumber(L, 2)) {
+        lua.pushBoolean(L, false);
+        return 1;
+    }
+    const amount: u32 = @intCast(lua.toInteger(L, 2));
+
+    // Need to duplicate the string for the action queue (it will be freed when action is processed)
+    // Get allocator from somewhere... for now we'll use the queue's allocator
+    // Actually, we need access to allocator - this is a design issue
+    // For now, let's return false since we can't properly allocate the string
+    // TODO: Fix this by passing allocator context through Lua registry
+    _ = resource_type;
+    _ = amount;
+
+    lua.pushBoolean(L, false);
+    return 1;
+}
+
+// ============================================================================
 // Module Registration
 // ============================================================================
 
@@ -182,7 +354,7 @@ pub fn registerEntityAPI(L: ?*lua.lua_State) void {
     // Create 'entity' table
     lua.newTable(L);
 
-    // Register functions
+    // Register query functions
     lua.pushCFunction(L, lua_entity_getId);
     lua.setField(L, -2, "getId");
 
@@ -203,6 +375,16 @@ pub fn registerEntityAPI(L: ?*lua.lua_State) void {
 
     lua.pushCFunction(L, lua_entity_isActive);
     lua.setField(L, -2, "isActive");
+
+    // Register action functions
+    lua.pushCFunction(L, lua_entity_moveTo);
+    lua.setField(L, -2, "moveTo");
+
+    lua.pushCFunction(L, lua_entity_harvest);
+    lua.setField(L, -2, "harvest");
+
+    lua.pushCFunction(L, lua_entity_consume);
+    lua.setField(L, -2, "consume");
 
     // Set as global 'entity' table
     lua.setGlobal(L, "entity");
@@ -567,4 +749,232 @@ test "Entity API: all entity roles" {
         const max_e = try vm.getGlobalNumber("max_e");
         try std.testing.expectEqual(expected_max, max_e);
     }
+}
+
+// ============================================================================
+// Action API Tests
+// ============================================================================
+
+test "Entity API: action queue context set/get" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    // Set action queue context
+    setActionQueueContext(vm.L, &queue);
+
+    // Get action queue context
+    const retrieved = getActionQueueContext(vm.L);
+    try std.testing.expect(retrieved != null);
+}
+
+test "Entity API: moveTo action from Lua" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    // Set up contexts
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Call moveTo from Lua
+    try vm.doString("success = entity.moveTo({q = 5, r = 10})");
+
+    // Verify action was queued
+    try std.testing.expectEqual(@as(usize, 1), queue.count());
+    const actions = queue.getActions();
+    try std.testing.expectEqual(@as(i32, 5), actions[0].move.target.q);
+    try std.testing.expectEqual(@as(i32, 10), actions[0].move.target.r);
+
+    // Verify Lua returned true
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 1.0), success);
+}
+
+test "Entity API: harvest action from Lua" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Call harvest from Lua
+    try vm.doString("success = entity.harvest({q = 3, r = -2})");
+
+    // Verify action was queued
+    try std.testing.expectEqual(@as(usize, 1), queue.count());
+    const actions = queue.getActions();
+    try std.testing.expectEqual(@as(i32, 3), actions[0].harvest.target.q);
+    try std.testing.expectEqual(@as(i32, -2), actions[0].harvest.target.r);
+
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 1.0), success);
+}
+
+test "Entity API: multiple actions queued" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Queue multiple actions from Lua
+    try vm.doString(
+        \\s1 = entity.moveTo({q = 1, r = 0})
+        \\s2 = entity.harvest({q = 2, r = 0})
+        \\s3 = entity.moveTo({q = 3, r = 0})
+    );
+
+    // Verify all actions were queued
+    try std.testing.expectEqual(@as(usize, 3), queue.count());
+
+    const actions = queue.getActions();
+    try std.testing.expectEqual(@as(i32, 1), actions[0].move.target.q);
+    try std.testing.expectEqual(@as(i32, 2), actions[1].harvest.target.q);
+    try std.testing.expectEqual(@as(i32, 3), actions[2].move.target.q);
+}
+
+test "Entity API: moveTo with invalid argument returns false" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Try to call moveTo with invalid arguments
+    try vm.doString("success = entity.moveTo(123)"); // Not a table
+
+    // Verify no action was queued
+    try std.testing.expectEqual(@as(usize, 0), queue.count());
+
+    // Verify Lua returned false
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 0.0), success);
+}
+
+test "Entity API: moveTo with missing q field returns false" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Try to call moveTo with table missing 'q' field
+    try vm.doString("success = entity.moveTo({r = 5})");
+
+    // Verify no action was queued
+    try std.testing.expectEqual(@as(usize, 0), queue.count());
+
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 0.0), success);
+}
+
+test "Entity API: moveTo without action queue context returns false" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+
+    setEntityContext(vm.L, &test_entity);
+    // Note: NOT setting action queue context
+    registerEntityAPI(vm.L);
+
+    // Try to call moveTo without action queue
+    try vm.doString("success = entity.moveTo({q = 5, r = 10})");
+
+    // Verify Lua returned false
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 0.0), success);
+}
+
+test "Entity API: action queue clear and requeue" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Queue some actions
+    try vm.doString("entity.moveTo({q = 1, r = 0})");
+    try std.testing.expectEqual(@as(usize, 1), queue.count());
+
+    // Clear queue (simulating tick processing)
+    queue.clear();
+    try std.testing.expectEqual(@as(usize, 0), queue.count());
+
+    // Queue new actions
+    try vm.doString("entity.moveTo({q = 2, r = 0})");
+    try std.testing.expectEqual(@as(usize, 1), queue.count());
+
+    const actions = queue.getActions();
+    try std.testing.expectEqual(@as(i32, 2), actions[0].move.target.q);
+}
+
+test "Entity API: consume action returns false (stub)" {
+    const LuaVM = @import("lua_vm.zig").LuaVM;
+
+    var vm = try LuaVM.init(std.testing.allocator);
+    defer vm.deinit();
+
+    var test_entity = Entity.init(1, HexCoord{ .q = 0, .r = 0 }, .worker);
+    var queue = ActionQueue.init(std.testing.allocator);
+    defer queue.deinit();
+
+    setEntityContext(vm.L, &test_entity);
+    setActionQueueContext(vm.L, &queue);
+    registerEntityAPI(vm.L);
+
+    // Call consume (currently a stub that returns false)
+    try vm.doString("success = entity.consume('energy_cell', 5)");
+
+    // Verify consume is not yet implemented (returns false)
+    const success = try vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 0.0), success);
 }

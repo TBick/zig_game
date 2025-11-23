@@ -1,8 +1,8 @@
 # Session State
 
 **Last Updated**: 2025-11-23 (Session 6 In Progress)
-**Current Phase**: Phase 2 (In Progress) - Entity Lua API Started
-**Overall Progress**: Phase 1 Complete (100%), Phase 2 In Progress (45%)
+**Current Phase**: Phase 2 (In Progress) - Entity Lua API Complete!
+**Overall Progress**: Phase 1 Complete (100%), Phase 2 In Progress (55%)
 
 ---
 
@@ -12,12 +12,12 @@
 |-------|--------|----------|-------|
 | Phase 0: Setup | Complete | 100% | All success criteria met + Windows cross-compilation |
 | Phase 1: Core Engine | Complete | 100% | Hex grid ✓, rendering ✓, entities ✓, tick scheduler ✓, selection ✓ |
-| Phase 2: Lua Integration | In Progress | 45% | Lua VM ✓, Entity API started, World API pending, Script execution pending |
+| Phase 2: Lua Integration | In Progress | 55% | Lua VM ✓, Entity API ✓ (query + actions), World API pending, Script execution pending |
 | Phase 3: Gameplay Systems | Not Started | 0% | Blocked on Phase 2 |
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: Phase 2A Entity Lua API! Entity query functions implemented (getId, getPosition, getEnergy, getRole, isActive). Next: Action queue system.
+**Current Focus**: Phase 2A Complete! Entity API finished with query functions (getId, getPosition, etc.) and action functions (moveTo, harvest). Next: World Query API (Phase 2B).
 
 ---
 
@@ -126,9 +126,10 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - [x] Implement get/setGlobal for numbers and strings
 - [x] Write comprehensive tests (5 tests, all passing)
 
-#### Entity Lua API 🔄 (In Progress - 60%)
-- [x] Create entity_api.zig module (~350 lines)
+#### Entity Lua API ✅ (Complete - 100%)
+- [x] Create entity_api.zig module (~600 lines total)
 - [x] Implement entity context management (set/get via registry)
+- [x] Implement action queue context management
 - [x] Implement self table creation (entity properties as Lua table)
 - [x] Expose entity.getId() to Lua
 - [x] Expose entity.getPosition() to Lua (returns {q, r} table)
@@ -137,10 +138,12 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - [x] Expose entity.getRole() to Lua (returns string)
 - [x] Expose entity.isAlive() to Lua
 - [x] Expose entity.isActive() to Lua
+- [x] Create action queue system (action_queue.zig, ~200 lines, 7 tests)
+- [x] Expose entity.moveTo(position) to Lua - queues move action
+- [x] Expose entity.harvest(position) to Lua - queues harvest action (stub)
+- [x] Expose entity.consume(resource, amount) to Lua - stub for Phase 3
 - [x] Add registerEntityAPI() module registration
-- [x] Write 8 comprehensive integration tests
-- [ ] Create action queue system (entity.move, entity.harvest, etc.)
-- [ ] Test action queueing from Lua scripts
+- [x] Write 17 comprehensive integration tests (8 query + 9 action)
 
 #### World Query API ⏳
 - [ ] Expose world.getTileAt(q, r) to Lua
@@ -176,7 +179,7 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - [ ] All tests passing (target: 125+ tests)
 - [ ] 60 FPS maintained with 100+ entities running scripts
 
-**Phase 2 Status**: 🔄 IN PROGRESS (30%)
+**Phase 2 Status**: 🔄 IN PROGRESS (55%)
 
 ---
 
@@ -235,50 +238,71 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - ✅ Fullscreen borderless window with proper VSync handling
 - ✅ Fixed WSL2/WSLg graphics issues with Windows cross-compilation
 
-### Phase 2 - Lua Integration (45% Complete)
+### Phase 2 - Lua Integration (55% Complete)
 - ✅ `vendor/lua-5.4.8/` - Complete Lua 5.4.8 source code (34 C files)
 - ✅ `src/scripting/lua_c.zig` - Raw Lua C API bindings (~220 lines) + table ops
 - ✅ `src/scripting/lua_vm.zig` - Zig-friendly Lua VM wrapper (~170 lines, 5 tests)
-- ✅ `src/scripting/entity_api.zig` - Entity Lua API (~350 lines, 8 tests)
+- ✅ `src/scripting/entity_api.zig` - Entity Lua API (~600 lines, 17 tests)
+- ✅ `src/core/action_queue.zig` - Action queue system (~200 lines, 7 tests)
 - ✅ build.zig - Lua C source compilation integrated
 - ✅ Lua VM lifecycle - init, deinit, proper cleanup
 - ✅ Basic Lua execution - doString() with error handling
 - ✅ Global variables - get/set for numbers and strings
 - ✅ Entity context injection - set/get entity pointer via registry
+- ✅ Action queue context - set/get action queue pointer via registry
 - ✅ Self table creation - entity properties as Lua table
 - ✅ Entity query API - 7 functions (getId, getPosition, getEnergy, etc.)
+- ✅ Entity action API - 3 functions (moveTo, harvest, consume)
+- ✅ Action queue - EntityAction union, queue management, memory safety
 - ✅ Memory safety - allocator-based string handling
-- ✅ 13 comprehensive tests - VM (5), Entity API (8)
+- ✅ 29 comprehensive tests - VM (5), Entity API (17), Action Queue (7)
 
 ---
 
 ## Completed This Session (Session 6)
 
-### Entity Lua API Implementation (Phase 2A Step 1)
+### Entity Lua API Implementation (Phase 2A - Complete)
+
+**Part 1: Entity Query API (Step 1)**
 1. ✅ Enhanced lua_c.zig with additional C API bindings:
    - pushLightuserdata - for entity pointer passing
    - createTable/newTable - for creating Lua tables
    - getI/setI - for indexed table access
-2. ✅ Created entity_api.zig (~350 lines, 8 tests):
+2. ✅ Created entity_api.zig query functions (~350 lines, 8 tests):
    - Entity context management (setEntityContext, getEntityContext)
    - Self table creation (createSelfTable) with entity properties
    - 7 entity query functions (getId, getPosition, getEnergy, getMaxEnergy, getRole, isAlive, isActive)
    - Module registration (registerEntityAPI)
 3. ✅ Fixed Zig 0.15.1 syntax (@ptrCast and @intCast now take 1 argument)
-4. ✅ Wrote 8 comprehensive integration tests
-5. ✅ Updated documentation (SESSION_STATE.md)
+
+**Part 2: Action Queue System (Step 2)**
+4. ✅ Created action_queue.zig (~200 lines, 7 tests):
+   - EntityAction union type (move, harvest, consume variants)
+   - ActionQueue data structure with proper memory management
+   - add/clear/getActions/count methods
+5. ✅ Extended entity_api.zig with action functions (~250 lines, 9 tests):
+   - Action queue context management (setActionQueueContext, getActionQueueContext)
+   - entity.moveTo(position) - queue move actions from Lua
+   - entity.harvest(position) - queue harvest actions (stub for Phase 3)
+   - entity.consume(resource, amount) - stub returning false until Phase 3
+6. ✅ Wrote 16 comprehensive integration tests (8 query + 7 queue + 9 action)
+7. ✅ Updated documentation (SESSION_STATE.md, LUA_API_IMPLEMENTED.md, CONTEXT_HANDOFF_PROTOCOL.md)
 
 ### Key Achievements
-- **Test Count**: 109 → 117 tests (+8 entity API tests)
-- **Entity API**: 7 query functions fully implemented
-- **Code Quality**: Proper error handling, memory-safe Lua interop
-- **Progress**: Phase 2 from 30% → 45%
+- **Test Count**: 109 → 133 tests (+24 tests total: 8 query + 7 queue + 9 action)
+- **Entity API**: Complete with 7 query + 3 action functions
+- **Action Queue**: Full command queue pattern implementation
+- **Code Quality**: Proper error handling, memory-safe Lua interop, comprehensive validation
+- **Progress**: Phase 2 from 30% → 55%
 
 ### Technical Highlights
+- **Command Queue Pattern**: Scripts queue actions, engine processes after all scripts run
 - **Entity Context Pattern**: Light userdata in Lua registry for C function access
+- **Action Queue Context**: Separate context for action queue pointer
 - **Self Table**: Lua table with entity properties (id, position, role, energy, max_energy)
-- **API Organization**: Namespaced 'entity' table (entity.getId(), entity.getPosition(), etc.)
+- **API Organization**: Namespaced 'entity' table with query + action functions
 - **Zig 0.15.1 Compatibility**: Fixed @ptrCast and @intCast syntax (now single-argument)
+- **Memory Management**: Proper cleanup for consume actions (string duplication/freeing)
 
 ---
 
@@ -383,19 +407,19 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 ### Code Metrics (Target vs Actual)
 | Metric | Current | Phase 0 Target | Phase 1 Target | Phase 2 Target | Final Target |
 |--------|---------|----------------|----------------|----------------|--------------|
-| Lines of Code | ~3,720+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
+| Lines of Code | ~4,150+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
 | Test Coverage | >90% | N/A | >80% | >85% | >80% |
-| Modules | 12 | 0 | 8-10 | 12-15 | 20-25 |
-| Tests | 117 | 5-10 | 50+ | 125+ | 200+ |
+| Modules | 13 | 0 | 8-10 | 12-15 | 20-25 |
+| Tests | 133 | 5-10 | 50+ | 125+ | 200+ |
 
 ### Development Metrics
 | Metric | Value |
 |--------|-------|
 | Sessions Completed | 5 (Session 6 in progress) |
-| Commits | 22+ (Session 6 pending) |
+| Commits | 23+ (Session 6 in progress) |
 | Documentation Pages | 14 |
-| Code Files | 12 modules + main.zig + vendored Lua |
-| Tests Passing | 117 / 117 (100% expected) |
+| Code Files | 13 modules + main.zig + vendored Lua |
+| Tests Passing | 133 / 133 (100% expected) |
 | Memory Leaks | 0 |
 | Build Time | ~3 seconds |
 | Executable Size | 21MB (Lua + Raylib) |

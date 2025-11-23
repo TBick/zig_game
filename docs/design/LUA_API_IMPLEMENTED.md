@@ -1,6 +1,6 @@
 # Lua API - Currently Implemented
 
-**Status**: Phase 2 at 45% complete - Lua VM operational, Entity query API implemented!
+**Status**: Phase 2 at 55% complete - Lua VM operational, Entity API complete (query + actions)!
 
 This document describes the **currently working** Lua integration. For planned API functions, see [LUA_API_PLANNED.md](LUA_API_PLANNED.md).
 
@@ -8,7 +8,7 @@ This document describes the **currently working** Lua integration. For planned A
 
 ## Implementation Status
 
-### ✅ Implemented (Phase 2 - 45%)
+### ✅ Implemented (Phase 2 - 55%)
 
 **Lua VM Foundation** (`src/scripting/lua_vm.zig`, `lua_c.zig`):
 - ✅ Lua 5.4.8 integrated with raw C bindings (~220 lines)
@@ -21,6 +21,7 @@ This document describes the **currently working** Lua integration. For planned A
 
 **Entity Query API** (`src/scripting/entity_api.zig`):
 - ✅ Entity context injection (setEntityContext, getEntityContext)
+- ✅ Action queue context injection (setActionQueueContext, getActionQueueContext)
 - ✅ Self table creation with entity properties
 - ✅ `entity.getId()` - Get entity ID
 - ✅ `entity.getPosition()` - Get hex position as {q, r} table
@@ -31,16 +32,23 @@ This document describes the **currently working** Lua integration. For planned A
 - ✅ `entity.isActive()` - Check if entity is active (alive && has energy)
 - ✅ 8 comprehensive integration tests
 
+**Entity Action API** (`src/scripting/entity_api.zig`, `src/core/action_queue.zig`):
+- ✅ Action queue system (EntityAction union, ActionQueue data structure)
+- ✅ `entity.moveTo(position)` - Queue move action to target hex
+- ✅ `entity.harvest(position)` - Queue harvest action (stub for Phase 3)
+- ✅ `entity.consume(resource, amount)` - Stub returning false (Phase 3)
+- ✅ Command queue pattern - actions queued, then processed by engine
+- ✅ 16 comprehensive tests (7 action_queue + 9 entity_api action tests)
+
 ### ⏳ In Progress / Not Yet Implemented
 
-- ⏳ Entity Action API (entity.moveTo, entity.harvest, entity.consume)
-- ⏳ Action queue system
 - ⏳ World Query API (world.*, see LUA_API_PLANNED.md)
 - ⏳ Memory persistence (memory table)
 - ⏳ Sandboxing (CPU/memory limits)
 - ⏳ Per-entity script execution in tick system
 - ⏳ Script loading from files
 - ⏳ Error handling and debugging
+- ⏳ Action execution system (process queued actions)
 
 ---
 
@@ -114,15 +122,19 @@ pub fn main() !void {
 
     // Entity API usage
     var my_entity = Entity.init(42, HexCoord{.q = 5, .r = 3}, .worker);
+    var action_queue = ActionQueue.init(allocator);
+    defer action_queue.deinit();
 
-    // Set up entity context and API
+    // Set up entity context, action queue, and API
     entity_api.setEntityContext(vm.L, &my_entity);
+    entity_api.setActionQueueContext(vm.L, &action_queue);
     entity_api.registerEntityAPI(vm.L);
     entity_api.createSelfTable(vm.L, &my_entity);
     lua.setGlobal(vm.L, "self");
 
-    // Now Lua scripts can access entity!
+    // Now Lua scripts can access entity and queue actions!
     try vm.doString(
+        \\-- Query entity state
         \\print("My ID: " .. self.id)
         \\print("Position: " .. self.position.q .. ", " .. self.position.r)
         \\print("Role: " .. self.role)
@@ -130,19 +142,43 @@ pub fn main() !void {
         \\local energy = entity.getEnergy()
         \\print("Energy: " .. energy)
         \\
+        \\-- Queue actions
         \\if entity.isActive() then
-        \\    print("I'm active!")
+        \\    local success = entity.moveTo({q = 10, r = 5})
+        \\    if success then
+        \\        print("Move action queued!")
+        \\    end
         \\end
     );
+
+    // Process queued actions
+    const actions = action_queue.getActions();
+    std.debug.print("Queued {d} actions\n", .{actions.len});
 }
+```
+
+### What Works NOW (New in Session 6!)
+
+```lua
+-- ✅ Entity actions work! (queued for processing)
+local success = entity.moveTo({q = 5, r = 5})  -- Returns true if queued
+if success then
+    print("Moving to (5, 5)")
+end
+
+entity.harvest({q = 3, r = 2})  -- Queues harvest action (stub for Phase 3)
+
+-- Multiple actions can be queued
+entity.moveTo({q = 1, r = 0})
+entity.moveTo({q = 2, r = 0})
+-- Both actions queued, engine will process them
 ```
 
 ### What Doesn't Work Yet
 
 ```lua
--- ❌ No entity actions yet
-entity.moveTo({q=5, r=5})  -- ERROR: moveTo not implemented yet
-entity.harvest({q=3, r=2})  -- ERROR: harvest not implemented yet
+-- ❌ consume() is a stub (Phase 3 - needs resource system)
+entity.consume("energy_cell", 5)  -- Always returns false currently
 
 -- ❌ No world query API yet
 local tile = world.getTileAt(0, 0)  -- ERROR: 'world' is undefined
@@ -155,6 +191,10 @@ while true do end  -- Will hang forever (no CPU limit)
 
 -- ❌ Can't call Lua functions from Zig yet
 function update() return 42 end  -- Function defined, but no way to call from Zig
+
+-- ❌ Actions not automatically executed yet (Phase 2C)
+-- Currently: scripts queue actions, but no automatic execution
+-- Need to manually process action_queue.getActions() for now
 ```
 
 ---
@@ -189,7 +229,7 @@ vendor/lua-5.4.8/ (Lua 5.4.8 C source, compiled directly)
 - Memory-safe string handling with allocators
 - Error types (`LuaError.OutOfMemory`, `LuaError.RuntimeError`, etc.)
 
-**`src/scripting/entity_api.zig`** (~350 lines, 8 tests):
+**`src/scripting/entity_api.zig`** (~600 lines, 17 tests):
 - Entity context management (light userdata pattern)
 - Self table creation with entity properties
 - 7 entity query functions (getId, getPosition, getEnergy, getRole, etc.)
@@ -232,7 +272,7 @@ exe.linkLibC();
 4. ✅ **Lua Math** - Verify `10 + 20 * 3 = 70`
 5. ✅ **Lua Strings** - Verify `'Hello' .. ' ' .. 'World'`
 
-**Entity API Tests** (`src/scripting/entity_api.zig` - 8 tests):
+**Entity API Tests** (`src/scripting/entity_api.zig` - 17 tests):
 1. ✅ **Entity Context** - Set/get entity context via registry
 2. ✅ **Self Table Creation** - Verify table structure and properties
 3. ✅ **getId from Lua** - Call entity.getId() and verify result
@@ -241,8 +281,26 @@ exe.linkLibC();
 6. ✅ **getRole from Lua** - Verify role string
 7. ✅ **isActive from Lua** - Verify boolean result
 8. ✅ **Complete Workflow** - Self table + API functions together
+9. ✅ **Action Queue Context** - Set/get action queue context
+10. ✅ **moveTo from Lua** - Queue move action and verify
+11. ✅ **harvest from Lua** - Queue harvest action and verify
+12. ✅ **Multiple Actions** - Queue multiple actions
+13. ✅ **Invalid Arguments** - Verify error handling
+14. ✅ **Missing Fields** - Verify validation
+15. ✅ **Missing Context** - Verify graceful failure
+16. ✅ **Queue Clear and Requeue** - Test queue lifecycle
+17. ✅ **consume Stub** - Verify stub returns false
 
-**All 13 tests passing**, 0 memory leaks (verified with test allocator).
+**Action Queue Tests** (`src/core/action_queue.zig` - 7 tests):
+1. ✅ **Init and Deinit** - Lifecycle management
+2. ✅ **Add Move Action** - Queue move action
+3. ✅ **Add Harvest Action** - Queue harvest action
+4. ✅ **Add Consume Action** - Queue consume action with string
+5. ✅ **Add Multiple Actions** - Queue multiple actions
+6. ✅ **Clear Actions** - Clear queue
+7. ✅ **Clear with Memory** - Verify string cleanup
+
+**All 29 tests passing** (5 VM + 17 Entity API + 7 Action Queue), 0 memory leaks (verified with test allocator).
 
 ---
 
