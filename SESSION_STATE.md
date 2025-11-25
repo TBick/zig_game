@@ -1,8 +1,8 @@
 # Session State
 
-**Last Updated**: 2025-11-23 (Session 6 In Progress)
-**Current Phase**: Phase 2 (In Progress) - Entity Lua API Complete!
-**Overall Progress**: Phase 1 Complete (100%), Phase 2 In Progress (55%)
+**Last Updated**: 2025-11-24 (Session 7 In Progress)
+**Current Phase**: Phase 2 (In Progress) - Entity API ✅, World API ✅
+**Overall Progress**: Phase 1 Complete (100%), Phase 2 In Progress (70%)
 
 ---
 
@@ -12,12 +12,12 @@
 |-------|--------|----------|-------|
 | Phase 0: Setup | Complete | 100% | All success criteria met + Windows cross-compilation |
 | Phase 1: Core Engine | Complete | 100% | Hex grid ✓, rendering ✓, entities ✓, tick scheduler ✓, selection ✓ |
-| Phase 2: Lua Integration | In Progress | 55% | Lua VM ✓, Entity API ✓ (query + actions), World API pending, Script execution pending |
+| Phase 2: Lua Integration | In Progress | 70% | Lua VM ✓, Entity API ✓, World API ✓, Script execution pending |
 | Phase 3: Gameplay Systems | Not Started | 0% | Blocked on Phase 2 |
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: Phase 2A Complete! Entity API finished with query functions (getId, getPosition, etc.) and action functions (moveTo, harvest). Next: World Query API (Phase 2B).
+**Current Focus**: Phase 2B Complete! Entity API ✅ + World API ✅. Lua scripts can now query entity state AND world state. Next: Script integration into tick system (Phase 2C).
 
 ---
 
@@ -145,11 +145,16 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - [x] Add registerEntityAPI() module registration
 - [x] Write 17 comprehensive integration tests (8 query + 9 action)
 
-#### World Query API ⏳
-- [ ] Expose world.getTileAt(q, r) to Lua
-- [ ] Expose world.findEntities(predicate) to Lua
-- [ ] Expose world.getNeighbors(position) to Lua
-- [ ] Test world API from Lua scripts
+#### World Query API ✅
+- [x] Create world_api.zig module (~350 lines, 13 tests)
+- [x] Implement dual-context management (grid + entity manager)
+- [x] Expose world.getTileAt(q, r) to Lua - returns tile or nil
+- [x] Expose world.distance(pos1, pos2) to Lua - hex distance calculation
+- [x] Expose world.neighbors(position) to Lua - returns 6 adjacent positions
+- [x] Expose world.findEntitiesAt(position) to Lua - find entities at position
+- [x] Expose world.findNearbyEntities(pos, range, role?) to Lua - spatial queries
+- [x] Add registerWorldAPI() module registration
+- [x] Write 13 comprehensive integration tests
 
 #### Script Execution System ⏳
 - [ ] Integrate Lua VM into EntityManager
@@ -170,16 +175,16 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - [ ] Test scripts in game
 
 ### Phase 2 Success Criteria
-- [ ] Lua VM integrated and tested (✅ DONE)
-- [ ] Entity API exposed to Lua
-- [ ] World API exposed to Lua
+- [x] Lua VM integrated and tested (✅ DONE)
+- [x] Entity API exposed to Lua (✅ DONE)
+- [x] World API exposed to Lua (✅ DONE)
 - [ ] Per-entity scripts execute each tick
 - [ ] CPU/memory sandboxing enforced
 - [ ] 3+ example Lua scripts working
 - [ ] All tests passing (target: 125+ tests)
 - [ ] 60 FPS maintained with 100+ entities running scripts
 
-**Phase 2 Status**: 🔄 IN PROGRESS (55%)
+**Phase 2 Status**: 🔄 IN PROGRESS (70%)
 
 ---
 
@@ -238,12 +243,13 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - ✅ Fullscreen borderless window with proper VSync handling
 - ✅ Fixed WSL2/WSLg graphics issues with Windows cross-compilation
 
-### Phase 2 - Lua Integration (55% Complete)
+### Phase 2 - Lua Integration (70% Complete)
 - ✅ `vendor/lua-5.4.8/` - Complete Lua 5.4.8 source code (34 C files)
 - ✅ `src/scripting/lua_c.zig` - Raw Lua C API bindings (~220 lines) + table ops
 - ✅ `src/scripting/lua_vm.zig` - Zig-friendly Lua VM wrapper (~170 lines, 5 tests)
 - ✅ `src/scripting/entity_api.zig` - Entity Lua API (~600 lines, 17 tests)
 - ✅ `src/core/action_queue.zig` - Action queue system (~200 lines, 7 tests)
+- ✅ `src/scripting/world_api.zig` - World Query API (~350 lines, 13 tests)
 - ✅ build.zig - Lua C source compilation integrated
 - ✅ Lua VM lifecycle - init, deinit, proper cleanup
 - ✅ Basic Lua execution - doString() with error handling
@@ -254,8 +260,54 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 - ✅ Entity query API - 7 functions (getId, getPosition, getEnergy, etc.)
 - ✅ Entity action API - 3 functions (moveTo, harvest, consume)
 - ✅ Action queue - EntityAction union, queue management, memory safety
+- ✅ World query API - 5 functions (getTileAt, distance, neighbors, findEntitiesAt, findNearbyEntities)
+- ✅ Dual-context pattern - Grid and EntityManager pointers in registry
 - ✅ Memory safety - allocator-based string handling
-- ✅ 29 comprehensive tests - VM (5), Entity API (17), Action Queue (7)
+- ✅ 42 comprehensive tests - VM (5), Entity API (17), Action Queue (7), World API (13)
+
+---
+
+## Completed This Session (Session 7)
+
+### World Query API Implementation (Phase 2B - Complete)
+
+1. ✅ Created world_api.zig (~350 lines, 13 tests):
+   - Dual-context management (HexGrid + EntityManager pointers in registry)
+   - `world.getTileAt(q, r)` - Query tile at hex coordinate, supports both table and separate args
+   - `world.distance(pos1, pos2)` - Calculate hex distance between positions
+   - `world.neighbors(position)` - Get all 6 neighboring hex coordinates as array
+   - `world.findEntitiesAt(position)` - Find all entities at specific position
+   - `world.findNearbyEntities(pos, range, role?)` - Find entities within range with optional role filter
+   - Module registration function (registerWorldAPI)
+
+2. ✅ Wrote 13 comprehensive integration tests:
+   - Context management (2 tests: grid + entity manager)
+   - getTileAt variants (3 tests: existing tile, non-existent, table arg)
+   - distance calculation (1 test)
+   - neighbors (1 test)
+   - findEntitiesAt (2 tests: with/without entities)
+   - findNearbyEntities (2 tests: with/without role filter)
+   - Complete workflow (1 test)
+   - Edge cases and validation (1 test)
+
+3. ✅ Updated documentation:
+   - LUA_API_IMPLEMENTED.md - Added World API section, examples, updated test count
+   - SESSION_STATE.md - Updated progress from 55% → 70%
+
+### Key Achievements
+- **Test Count**: 133 → 146 tests (+13 world API tests)
+- **World API**: Complete with 5 query functions
+- **Dual-Context Pattern**: Clean separation of grid and entity manager contexts
+- **Code Quality**: Comprehensive error handling, input validation, Lua-friendly API
+- **Progress**: Phase 2 from 55% → 70%
+
+### Technical Highlights
+- **Dual-Context Management**: Store both HexGrid and EntityManager pointers in Lua registry
+- **Flexible Arguments**: getTileAt supports both {q, r} table and separate q, r arguments
+- **Spatial Queries**: findNearbyEntities with range and optional role filter
+- **Stack Buffers**: Use stack buffers for entity queries (up to 100 entities)
+- **Lua Arrays**: Return Lua 1-indexed arrays for neighbors and entity lists
+- **Position Tables**: Helper functions to read/write {q, r} tables
 
 ---
 
@@ -364,13 +416,14 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
 
 ## In Progress
 
-**Phase 2: Lua Integration** (45% complete)
+**Phase 2: Lua Integration** (70% complete)
 - ✅ Lua VM integrated with raw C bindings
-- 🔄 Current: Entity Lua API (query functions done, actions next)
-- ⏳ Next: Action queue system (entity.move(), entity.harvest(), etc.)
-- ⏳ Todo: World Query API (world.getTileAt(), world.findEntities())
-- ⏳ Todo: Per-entity script execution in tick system
+- ✅ Entity Lua API complete (query + action functions)
+- ✅ World Query API complete (5 spatial query functions)
+- 🔄 Current: Script integration into tick system (Phase 2C)
+- ⏳ Next: Per-entity script execution in tick loop
 - ⏳ Todo: CPU/memory sandboxing
+- ⏳ Todo: Example scripts (harvester, builder, explorer)
 
 ---
 
@@ -430,19 +483,19 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 ### Code Metrics (Target vs Actual)
 | Metric | Current | Phase 0 Target | Phase 1 Target | Phase 2 Target | Final Target |
 |--------|---------|----------------|----------------|----------------|--------------|
-| Lines of Code | ~4,150+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
+| Lines of Code | ~4,500+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
 | Test Coverage | >90% | N/A | >80% | >85% | >80% |
-| Modules | 13 | 0 | 8-10 | 12-15 | 20-25 |
-| Tests | 133 | 5-10 | 50+ | 125+ | 200+ |
+| Modules | 14 | 0 | 8-10 | 12-15 | 20-25 |
+| Tests | 146 | 5-10 | 50+ | 125+ | 200+ |
 
 ### Development Metrics
 | Metric | Value |
 |--------|-------|
 | Sessions Completed | 5 (Session 6 in progress) |
-| Commits | 23+ (Session 6 in progress) |
+| Commits | 25+ (Session 7 in progress) |
 | Documentation Pages | 14 |
-| Code Files | 13 modules + main.zig + vendored Lua |
-| Tests Passing | 133 / 133 (100% expected) |
+| Code Files | 14 modules + main.zig + vendored Lua |
+| Tests Passing | 146 / 146 (100% expected) |
 | Memory Leaks | 0 |
 | Build Time | ~3 seconds |
 | Executable Size | 21MB (Lua + Raylib) |
@@ -453,27 +506,27 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 |-------|-------------------|-----------------|----------|
 | Phase 0 | 1-2 days | 1 session | ✅ Faster than expected |
 | Phase 1 | 1-2 weeks | 4 sessions | ✅ On track, high quality |
-| Phase 2 | 1-2 weeks | 2 sessions so far (45%) | 🔄 In progress, on track |
+| Phase 2 | 1-2 weeks | 3 sessions so far (70%) | 🔄 In progress, excellent velocity |
 
 ---
 
 ## Next Session Priorities
 
-### Immediate (Continue Phase 2A - Entity Actions)
-1. **Action Queue System** - Create action_queue.zig with EntityAction union type
-2. **Entity Actions** - Implement entity.moveTo(), entity.harvest(), entity.consume()
-3. **Action Execution** - Process queued actions after all scripts run
-4. **Test Action Queue** - Write tests for action queueing and execution
+### Immediate (Phase 2C - Script Integration)
+1. **Script Execution** - Integrate Lua VM into EntityManager
+2. **Per-Entity Scripts** - Execute entity scripts each tick
+3. **Memory Persistence** - Implement 'memory' table that persists across ticks
+4. **Error Handling** - Gracefully handle script errors without crashing
 
-### Short-Term (Continue Phase 2B - World API)
-5. **World Query API** - Expose world.getTileAt(), world.distance(), world.neighbors()
-6. **Entity Queries** - Expose world.findNearbyEntities(), world.findEntitiesAt()
-7. **Test World API** - Write Lua scripts that query world state
+### Short-Term (Phase 2D - Sandboxing)
+5. **CPU Limits** - Implement instruction counting with lua_sethook
+6. **Memory Limits** - Custom allocator with tracking
+7. **Stdlib Restriction** - Remove dangerous functions (io, os, debug)
+8. **Test Sandboxing** - Verify limits enforced correctly
 
-### Medium-Term (Complete Phase 2C-D)
-8. **Script execution** - Integrate scripts into tick system (processTick)
-9. **Memory persistence** - entity.memory table that persists across ticks
-10. **Sandboxing** - CPU limits, memory limits, stdlib restriction
+### Medium-Term (Phase 2E - Examples & Integration)
+9. **Example Scripts** - Create harvester, builder, explorer bots
+10. **Action Execution** - Process queued actions in tick system
 
 ### Medium-Term (Phase 3)
 10. **Resource system** - Implement resource harvesting, storage, consumption

@@ -1,6 +1,6 @@
 # Lua API - Currently Implemented
 
-**Status**: Phase 2 at 55% complete - Lua VM operational, Entity API complete (query + actions)!
+**Status**: Phase 2 at 70% complete - Lua VM operational, Entity API complete, World API complete!
 
 This document describes the **currently working** Lua integration. For planned API functions, see [LUA_API_PLANNED.md](LUA_API_PLANNED.md).
 
@@ -8,7 +8,7 @@ This document describes the **currently working** Lua integration. For planned A
 
 ## Implementation Status
 
-### ✅ Implemented (Phase 2 - 55%)
+### ✅ Implemented (Phase 2 - 70%)
 
 **Lua VM Foundation** (`src/scripting/lua_vm.zig`, `lua_c.zig`):
 - ✅ Lua 5.4.8 integrated with raw C bindings (~220 lines)
@@ -40,9 +40,18 @@ This document describes the **currently working** Lua integration. For planned A
 - ✅ Command queue pattern - actions queued, then processed by engine
 - ✅ 16 comprehensive tests (7 action_queue + 9 entity_api action tests)
 
+**World Query API** (`src/scripting/world_api.zig`):
+- ✅ Grid and EntityManager context injection (dual-context pattern)
+- ✅ `world.getTileAt(q, r)` - Query tile at hex coordinate
+- ✅ `world.distance(pos1, pos2)` - Calculate hex distance between positions
+- ✅ `world.neighbors(position)` - Get all 6 neighboring hex coordinates
+- ✅ `world.findEntitiesAt(position)` - Find entities at specific position
+- ✅ `world.findNearbyEntities(pos, range, role?)` - Find entities within range with optional role filter
+- ✅ 13 comprehensive integration tests
+
 ### ⏳ In Progress / Not Yet Implemented
 
-- ⏳ World Query API (world.*, see LUA_API_PLANNED.md)
+- ⏳ World API integration into tick system
 - ⏳ Memory persistence (memory table)
 - ⏳ Sandboxing (CPU/memory limits)
 - ⏳ Per-entity script execution in tick system
@@ -157,7 +166,7 @@ pub fn main() !void {
 }
 ```
 
-### What Works NOW (New in Session 6!)
+### What Works NOW (New in Session 6 & 7!)
 
 ```lua
 -- ✅ Entity actions work! (queued for processing)
@@ -172,6 +181,29 @@ entity.harvest({q = 3, r = 2})  -- Queues harvest action (stub for Phase 3)
 entity.moveTo({q = 1, r = 0})
 entity.moveTo({q = 2, r = 0})
 -- Both actions queued, engine will process them
+
+-- ✅ World Query API works! (NEW in Session 7)
+local tile = world.getTileAt(5, 3)  -- Returns {coord = {q=5, r=3}} or nil
+if tile then
+    print("Tile exists at " .. tile.coord.q .. ", " .. tile.coord.r)
+end
+
+-- ✅ Hex distance calculation
+local dist = world.distance({q=0, r=0}, {q=3, r=0})  -- Returns 3
+
+-- ✅ Get neighboring hex coordinates
+local neighbors = world.neighbors({q=5, r=5})  -- Returns array of 6 positions
+for i = 1, #neighbors do
+    print("Neighbor " .. i .. ": " .. neighbors[i].q .. ", " .. neighbors[i].r)
+end
+
+-- ✅ Find entities at position
+local entities_here = world.findEntitiesAt({q=10, r=10})
+print("Found " .. #entities_here .. " entities at (10, 10)")
+
+-- ✅ Find nearby entities (with optional role filter)
+local nearby_workers = world.findNearbyEntities({q=0, r=0}, 5, "worker")
+local nearby_all = world.findNearbyEntities({q=0, r=0}, 10)  -- All entities in range
 ```
 
 ### What Doesn't Work Yet
@@ -179,9 +211,6 @@ entity.moveTo({q = 2, r = 0})
 ```lua
 -- ❌ consume() is a stub (Phase 3 - needs resource system)
 entity.consume("energy_cell", 5)  -- Always returns false currently
-
--- ❌ No world query API yet
-local tile = world.getTileAt(0, 0)  -- ERROR: 'world' is undefined
 
 -- ❌ No memory persistence yet
 memory.state = "idle"  -- ERROR: 'memory' is undefined
@@ -300,7 +329,22 @@ exe.linkLibC();
 6. ✅ **Clear Actions** - Clear queue
 7. ✅ **Clear with Memory** - Verify string cleanup
 
-**All 29 tests passing** (5 VM + 17 Entity API + 7 Action Queue), 0 memory leaks (verified with test allocator).
+**World API Tests** (`src/scripting/world_api.zig` - 13 tests):
+1. ✅ **Grid Context** - Set/get grid context via registry
+2. ✅ **EntityManager Context** - Set/get manager context
+3. ✅ **getTileAt with Existing Tile** - Query tile and verify
+4. ✅ **getTileAt with Non-Existent Tile** - Verify nil returned
+5. ✅ **getTileAt with Table Argument** - Support {q, r} table format
+6. ✅ **Distance Calculation** - Verify hex distance formula
+7. ✅ **Neighbors Returns 6 Positions** - Verify array of neighbors
+8. ✅ **findEntitiesAt with Entities** - Find entities at position
+9. ✅ **findEntitiesAt with No Entities** - Verify empty array
+10. ✅ **findNearbyEntities without Filter** - Range-based search
+11. ✅ **findNearbyEntities with Role Filter** - Filter by entity role
+12. ✅ **Complete Workflow** - Multiple queries together
+13. ✅ **Edge Cases and Validation** - Invalid arguments handled gracefully
+
+**All 42 tests passing** (5 VM + 17 Entity API + 7 Action Queue + 13 World API), 0 memory leaks (verified with test allocator).
 
 ---
 
@@ -344,6 +388,6 @@ See [LUA_API_PLANNED.md](LUA_API_PLANNED.md) for complete planned API.
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 2025-11-23 (Session 6 - Phase 2 at 45%)
-**Phase**: Phase 2 (Lua Integration) - 45% Complete
+**Document Version**: 1.2
+**Last Updated**: 2025-11-24 (Session 7 - Phase 2 at 70%)
+**Phase**: Phase 2 (Lua Integration) - 70% Complete
