@@ -20,6 +20,7 @@ pub const Entity = struct {
     energy: f32,      // Current energy level (0.0 to max_energy)
     max_energy: f32,  // Maximum energy capacity
     alive: bool,      // Is entity active (for soft deletion)
+    script: ?[]const u8, // Optional Lua script code for this entity
 
     /// Create a new entity with default values
     pub fn init(id: EntityId, position: HexCoord, role: EntityRole) Entity {
@@ -30,6 +31,7 @@ pub const Entity = struct {
             .energy = getRoleMaxEnergy(role),
             .max_energy = getRoleMaxEnergy(role),
             .alive = true,
+            .script = null,
         };
     }
 
@@ -66,6 +68,16 @@ pub const Entity = struct {
     pub fn kill(self: *Entity) void {
         self.alive = false;
         self.energy = 0.0;
+    }
+
+    /// Set the Lua script for this entity
+    pub fn setScript(self: *Entity, script: ?[]const u8) void {
+        self.script = script;
+    }
+
+    /// Check if entity has a script
+    pub fn hasScript(self: *const Entity) bool {
+        return self.script != null;
     }
 };
 

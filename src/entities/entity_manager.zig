@@ -3,6 +3,11 @@ const Entity = @import("entity.zig").Entity;
 const EntityId = @import("entity.zig").EntityId;
 const EntityRole = @import("entity.zig").EntityRole;
 const HexCoord = @import("../world/hex_grid.zig").HexCoord;
+const LuaVM = @import("../scripting/lua_vm.zig").LuaVM;
+const ActionQueue = @import("../core/action_queue.zig").ActionQueue;
+const EntityAction = @import("../core/action_queue.zig").EntityAction;
+const entity_api = @import("../scripting/entity_api.zig");
+const world_api = @import("../scripting/world_api.zig");
 
 /// Manages entity lifecycle and provides query interface
 pub const EntityManager = struct {
@@ -10,9 +15,15 @@ pub const EntityManager = struct {
     entities: std.ArrayList(Entity),
     next_id: EntityId,
     alive_count: usize,
+    lua_vm: LuaVM,
+    // Maps entity ID to Lua registry reference for memory table persistence
+    memory_refs: std.AutoHashMap(EntityId, i32),
 
     /// Initialize the entity manager
-    pub fn init(allocator: std.mem.Allocator) EntityManager {
+    pub fn init(allocator: std.mem.Allocator) !EntityManager {
+        var lua_vm = try LuaVM.init(allocator);
+        errdefer lua_vm.deinit();
+
         return EntityManager{
             .allocator = allocator,
             .entities = std.ArrayList(Entity){
@@ -21,12 +32,16 @@ pub const EntityManager = struct {
             },
             .next_id = 1,
             .alive_count = 0,
+            .lua_vm = lua_vm,
+            .memory_refs = std.AutoHashMap(EntityId, i32).init(allocator),
         };
     }
 
     /// Clean up resources
     pub fn deinit(self: *EntityManager) void {
         self.entities.deinit(self.allocator);
+        self.lua_vm.deinit();
+        self.memory_refs.deinit();
     }
 
     /// Spawn a new entity at the given position with the given role
@@ -139,6 +154,111 @@ pub const EntityManager = struct {
         self.entities.clearRetainingCapacity();
         self.next_id = 1;
         self.alive_count = 0;
+        self.memory_refs.clearRetainingCapacity();
+    }
+
+    /// Process a game tick - execute all entity scripts and process actions
+    /// Requires a HexGrid pointer for world API context
+    pub fn processTick(self: *EntityManager, grid: anytype) !void {
+        // Execute all entity scripts
+        for (self.entities.items) |*entity| {
+            if (entity.alive and entity.hasScript()) {
+                try self.executeEntityScript(entity, grid);
+            }
+        }
+    }
+
+    /// Execute a single entity's Lua script
+    /// Sets up contexts (entity, action queue, world), runs script, processes actions
+    fn executeEntityScript(self: *EntityManager, entity: *Entity, grid: anytype) !void {
+        if (entity.script == null) return;
+
+        // Create action queue for this entity
+        var action_queue = ActionQueue.init(self.allocator);
+        defer action_queue.deinit();
+
+        // Set up Lua contexts
+        entity_api.setEntityContext(self.lua_vm.L.?, entity);
+        entity_api.setActionQueueContext(self.lua_vm.L.?, &action_queue);
+        world_api.setGridContext(self.lua_vm.L.?, grid);
+        world_api.setEntityManagerContext(self.lua_vm.L.?, self);
+
+        // Register APIs (safe to call multiple times)
+        entity_api.registerEntityAPI(self.lua_vm.L.?);
+        world_api.registerWorldAPI(self.lua_vm.L.?);
+
+        // Restore memory table for this entity
+        self.restoreMemoryTable(entity.id);
+
+        // Execute the script
+        self.lua_vm.doString(entity.script.?) catch |err| {
+            // Log error but don't crash - continue processing other entities
+            std.debug.print("Entity {d} script error: {any}\n", .{ entity.id, err });
+            return;
+        };
+
+        // Save memory table for next tick
+        try self.saveMemoryTable(entity.id);
+
+        // Process queued actions
+        self.processEntityActions(entity, action_queue.getActions());
+    }
+
+    /// Restore the memory table for an entity from Lua registry
+    fn restoreMemoryTable(self: *EntityManager, entity_id: EntityId) void {
+        const L = self.lua_vm.L.?;
+        const lua_c = @import("../scripting/lua_c.zig");
+
+        if (self.memory_refs.get(entity_id)) |registry_ref| {
+            // Get the table from registry and set as global 'memory'
+            _ = lua_c.rawGetI(L, lua_c.LUA_REGISTRYINDEX, registry_ref);
+            lua_c.setGlobal(L, "memory");
+        } else {
+            // First time - create empty memory table
+            lua_c.createTable(L, 0, 0);
+            lua_c.setGlobal(L, "memory");
+        }
+    }
+
+    /// Save the memory table for an entity to Lua registry
+    fn saveMemoryTable(self: *EntityManager, entity_id: EntityId) !void {
+        const L = self.lua_vm.L.?;
+        const lua_c = @import("../scripting/lua_c.zig");
+
+        // Get the 'memory' global
+        _ = lua_c.getGlobal(L, "memory");
+
+        // If this entity already has a ref, unreference the old table
+        if (self.memory_refs.get(entity_id)) |old_ref| {
+            lua_c.unref(L, lua_c.LUA_REGISTRYINDEX, old_ref);
+        }
+
+        // Store the new memory table in registry and save the reference
+        const registry_ref = lua_c.ref(L, lua_c.LUA_REGISTRYINDEX);
+        try self.memory_refs.put(entity_id, registry_ref);
+    }
+
+    /// Process queued actions for an entity
+    fn processEntityActions(self: *EntityManager, entity: *Entity, actions: []const EntityAction) void {
+        for (actions) |action| {
+            switch (action) {
+                .move => |move_data| {
+                    // Simple move: jump directly to target (Phase 3 will add pathfinding)
+                    entity.position = move_data.target;
+                    // Moving costs energy
+                    _ = entity.consumeEnergy(5.0);
+                },
+                .harvest => |_harvest_data| {
+                    // Phase 3: Implement resource harvesting
+                    // For now, just consume energy
+                    _ = entity.consumeEnergy(10.0);
+                },
+                .consume => |_consume_data| {
+                    // Phase 3: Implement resource consumption
+                    // For now, do nothing (resource system doesn't exist yet)
+                },
+            }
+        }
     }
 };
 
@@ -148,7 +268,7 @@ pub const EntityManager = struct {
 
 test "EntityManager.init and deinit" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     try std.testing.expectEqual(@as(EntityId, 1), manager.next_id);
@@ -157,7 +277,7 @@ test "EntityManager.init and deinit" {
 
 test "EntityManager.spawn creates entities with unique IDs" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const id1 = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -172,7 +292,7 @@ test "EntityManager.spawn creates entities with unique IDs" {
 
 test "EntityManager.getEntity retrieves correct entity" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const id = try manager.spawn(HexCoord{ .q = 5, .r = 7 }, .engineer);
@@ -187,7 +307,7 @@ test "EntityManager.getEntity retrieves correct entity" {
 
 test "EntityManager.getEntity returns null for non-existent ID" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     _ = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -198,7 +318,7 @@ test "EntityManager.getEntity returns null for non-existent ID" {
 
 test "EntityManager.destroy marks entity as dead" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -218,7 +338,7 @@ test "EntityManager.destroy marks entity as dead" {
 
 test "EntityManager.getEntitiesAt finds entities at position" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const pos = HexCoord{ .q = 5, .r = 5 };
@@ -236,7 +356,7 @@ test "EntityManager.getEntitiesAt finds entities at position" {
 
 test "EntityManager.getEntitiesByRole finds entities by role" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const id1 = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -254,7 +374,7 @@ test "EntityManager.getEntitiesByRole finds entities by role" {
 
 test "EntityManager.compact removes dead entities" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const id1 = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -278,7 +398,7 @@ test "EntityManager.compact removes dead entities" {
 
 test "EntityManager.clear removes all entities" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     _ = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
@@ -292,4 +412,155 @@ test "EntityManager.clear removes all entities" {
     try std.testing.expectEqual(@as(usize, 0), manager.getAliveCount());
     try std.testing.expectEqual(@as(usize, 0), manager.getTotalCount());
     try std.testing.expectEqual(@as(EntityId, 1), manager.next_id);
+}
+
+test "EntityManager.processTick executes entity scripts" {
+    const allocator = std.testing.allocator;
+    const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+
+    // Spawn entity with a simple script that sets a global
+    const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    const entity = manager.getEntity(id).?;
+    entity.setScript("test_value = 42");
+
+    // Process tick - should execute script
+    try manager.processTick(&grid);
+
+    // Verify script executed by checking global
+    const result = try manager.lua_vm.getGlobalNumber("test_value");
+    try std.testing.expectEqual(@as(f64, 42.0), result);
+}
+
+test "EntityManager.processTick handles move actions" {
+    const allocator = std.testing.allocator;
+    const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+
+    // Spawn entity with movement script
+    const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    const entity = manager.getEntity(id).?;
+    entity.setScript("entity.moveTo({q=5, r=3})");
+
+    const initial_energy = entity.energy;
+
+    // Process tick - should move entity
+    try manager.processTick(&grid);
+
+    // Verify entity moved and energy consumed
+    try std.testing.expectEqual(@as(i32, 5), entity.position.q);
+    try std.testing.expectEqual(@as(i32, 3), entity.position.r);
+    try std.testing.expect(entity.energy < initial_energy);
+}
+
+test "EntityManager.processTick memory persistence" {
+    const allocator = std.testing.allocator;
+    const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+
+    // Spawn entity with script that uses memory
+    const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    const entity = manager.getEntity(id).?;
+    entity.setScript(
+        \\if memory.count == nil then
+        \\  memory.count = 1
+        \\else
+        \\  memory.count = memory.count + 1
+        \\end
+        \\tick_count = memory.count
+    );
+
+    // First tick - should set memory.count = 1
+    try manager.processTick(&grid);
+    var result = try manager.lua_vm.getGlobalNumber("tick_count");
+    try std.testing.expectEqual(@as(f64, 1.0), result);
+
+    // Second tick - should increment to 2
+    try manager.processTick(&grid);
+    result = try manager.lua_vm.getGlobalNumber("tick_count");
+    try std.testing.expectEqual(@as(f64, 2.0), result);
+
+    // Third tick - should increment to 3
+    try manager.processTick(&grid);
+    result = try manager.lua_vm.getGlobalNumber("tick_count");
+    try std.testing.expectEqual(@as(f64, 3.0), result);
+}
+
+test "EntityManager.processTick handles script errors gracefully" {
+    const allocator = std.testing.allocator;
+    const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+
+    // Spawn two entities - one with broken script, one with working script
+    const id1 = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    const entity1 = manager.getEntity(id1).?;
+    entity1.setScript("this is invalid lua syntax!");
+
+    const id2 = try manager.spawn(HexCoord{ .q = 1, .r = 0 }, .combat);
+    const entity2 = manager.getEntity(id2).?;
+    entity2.setScript("success = true");
+
+    // Process tick - should continue despite error in entity1's script
+    try manager.processTick(&grid);
+
+    // Verify entity2's script executed successfully
+    const result = try manager.lua_vm.getGlobalNumber("success");
+    try std.testing.expectEqual(@as(f64, 1.0), result);
+}
+
+test "EntityManager.processTick processes multiple entities" {
+    const allocator = std.testing.allocator;
+    const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+
+    // Spawn 3 entities with different scripts
+    const id1 = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    manager.getEntity(id1).?.setScript("entity.moveTo({q=1, r=0})");
+
+    const id2 = try manager.spawn(HexCoord{ .q = 5, .r = 5 }, .combat);
+    manager.getEntity(id2).?.setScript("entity.moveTo({q=10, r=10})");
+
+    const id3 = try manager.spawn(HexCoord{ .q = -3, .r = 2 }, .scout);
+    manager.getEntity(id3).?.setScript("entity.moveTo({q=0, r=0})");
+
+    // Process tick - all should execute
+    try manager.processTick(&grid);
+
+    // Verify all entities moved
+    const entity1 = manager.getEntity(id1).?;
+    try std.testing.expectEqual(@as(i32, 1), entity1.position.q);
+    try std.testing.expectEqual(@as(i32, 0), entity1.position.r);
+
+    const entity2 = manager.getEntity(id2).?;
+    try std.testing.expectEqual(@as(i32, 10), entity2.position.q);
+    try std.testing.expectEqual(@as(i32, 10), entity2.position.r);
+
+    const entity3 = manager.getEntity(id3).?;
+    try std.testing.expectEqual(@as(i32, 0), entity3.position.q);
+    try std.testing.expectEqual(@as(i32, 0), entity3.position.r);
 }

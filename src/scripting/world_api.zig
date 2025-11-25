@@ -348,7 +348,7 @@ test "world_api: context set/get for entity manager" {
     var vm = try LuaVM.init(testing.allocator);
     defer vm.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     // Set and get manager context
@@ -475,7 +475,7 @@ test "world_api: findEntitiesAt with entities" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     // Spawn entities at position
@@ -506,7 +506,7 @@ test "world_api: findEntitiesAt with no entities" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     setGridContext(vm.L, &grid);
@@ -527,7 +527,7 @@ test "world_api: findNearbyEntities without role filter" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     // Spawn entities at various distances
@@ -554,7 +554,7 @@ test "world_api: findNearbyEntities with role filter" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     // Spawn entities with different roles
@@ -584,7 +584,7 @@ test "world_api: complete workflow with multiple queries" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    var manager = EntityManager.init(testing.allocator);
+    var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
     // Setup world

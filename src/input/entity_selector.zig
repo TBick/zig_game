@@ -131,7 +131,7 @@ test "EntitySelector.isSelected" {
 
 test "EntitySelector.getSelected with no selection" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const selector = EntitySelector.init();
@@ -142,7 +142,7 @@ test "EntitySelector.getSelected with no selection" {
 
 test "EntitySelector.getSelected with valid selection" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     // Spawn an entity
@@ -160,7 +160,7 @@ test "EntitySelector.getSelected with valid selection" {
 
 test "EntitySelector.getSelected with destroyed entity" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     // Spawn and then destroy an entity
@@ -177,7 +177,7 @@ test "EntitySelector.getSelected with destroyed entity" {
 
 test "EntitySelector.update with click on entity" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     // Spawn entity at (1, 1)
@@ -210,7 +210,7 @@ test "EntitySelector.update with click on entity" {
 
 test "EntitySelector.update with click on empty space" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     // Spawn entity at (1, 1)
@@ -245,7 +245,7 @@ test "EntitySelector.update with click on empty space" {
 
 test "EntitySelector.update with no click" {
     const allocator = std.testing.allocator;
-    var manager = EntityManager.init(allocator);
+    var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
     const camera = Camera.init();

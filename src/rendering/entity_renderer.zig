@@ -227,7 +227,7 @@ test "EntityRenderer handles dead entities correctly" {
 
 test "EntityRenderer with mixed alive and dead entities" {
     const allocator = std.testing.allocator;
-    var manager = @import("../entities/entity_manager.zig").EntityManager.init(allocator);
+    var manager = try @import("../entities/entity_manager.zig").EntityManager.init(allocator);
     defer manager.deinit();
 
     _ = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);

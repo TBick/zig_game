@@ -66,7 +66,7 @@ pub fn main() !void {
     var entity_renderer = EntityRenderer.init(12.0); // 12 pixel entity radius
 
     // Initialize entity manager
-    var entity_manager = EntityManager.init(allocator);
+    var entity_manager = try EntityManager.init(allocator);
     defer entity_manager.deinit();
 
     // Spawn some test entities
