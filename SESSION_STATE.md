@@ -295,7 +295,7 @@ Embed Lua 5.4 runtime, create scripting API for entities/world, enable per-entit
    - SESSION_STATE.md - Updated progress from 55% → 70%
 
 ### Key Achievements
-- **Test Count**: 133 → 146 tests (+13 world API tests)
+- **Test Count**: 133 → 149 tests (+16 total: 13 world API + 3 additional)
 - **World API**: Complete with 5 query functions
 - **Dual-Context Pattern**: Clean separation of grid and entity manager contexts
 - **Code Quality**: Comprehensive error handling, input validation, Lua-friendly API
@@ -485,8 +485,8 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 |--------|---------|----------------|----------------|----------------|--------------|
 | Lines of Code | ~4,500+ | ~500 | ~3,000 | ~5,000 | ~15,000+ |
 | Test Coverage | >90% | N/A | >80% | >85% | >80% |
-| Modules | 14 | 0 | 8-10 | 12-15 | 20-25 |
-| Tests | 146 | 5-10 | 50+ | 125+ | 200+ |
+| Modules | 15 | 0 | 8-10 | 12-15 | 20-25 |
+| Tests | 149 | 5-10 | 50+ | 125+ | 200+ |
 
 ### Development Metrics
 | Metric | Value |
@@ -494,8 +494,8 @@ See `CONTEXT_HANDOFF_PROTOCOL.md` for detailed session handoffs.
 | Sessions Completed | 5 (Session 6 in progress) |
 | Commits | 25+ (Session 7 in progress) |
 | Documentation Pages | 14 |
-| Code Files | 14 modules + main.zig + vendored Lua |
-| Tests Passing | 146 / 146 (100% expected) |
+| Code Files | 15 modules (including main.zig) + vendored Lua |
+| Tests Passing | 149 / 149 (100% expected) |
 | Memory Leaks | 0 |
 | Build Time | ~3 seconds |
 | Executable Size | 21MB (Lua + Raylib) |

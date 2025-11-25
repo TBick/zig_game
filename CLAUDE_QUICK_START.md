@@ -12,7 +12,7 @@ For detailed information, see [CLAUDE_REFERENCE.md](CLAUDE_REFERENCE.md).
 
 **Tech Stack**: Zig 0.15.1 + Lua 5.4.8 (raw C bindings) + Raylib 5.6.0
 
-**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 55%
+**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 70%
 
 **Repository**: https://github.com/TBick/zig_game
 
@@ -60,7 +60,7 @@ After reading above, you know:
 # Build and run (Linux)
 zig build run
 
-# Run tests (133 tests)
+# Run tests (149 tests)
 zig build test
 
 # Build for Windows (better graphics)
@@ -91,15 +91,15 @@ zig_game/
 │   ├── design/                   # Design specifications
 │   └── agent-framework/          # Agent templates
 │
-├── src/                          # ~3,370 lines of Zig code
+├── src/                          # ~4,500 lines of Zig code
 │   ├── main.zig                  # Entry point
-│   ├── core/                     # Tick scheduler
+│   ├── core/                     # Tick scheduler, action queue
 │   ├── world/                    # Hex grid (✅ complete)
 │   ├── entities/                 # Entity system (✅ complete)
 │   ├── rendering/                # Raylib rendering (✅ complete)
 │   ├── input/                    # Entity selection (✅ complete)
 │   ├── ui/                       # Debug overlay (✅ complete)
-│   ├── scripting/                # Lua integration (🔄 30% - VM done)
+│   ├── scripting/                # Lua integration (🔄 70% - VM, Entity API, World API done)
 │   ├── resources/                # Phase 3
 │   └── structures/               # Phase 3
 │
@@ -108,7 +108,7 @@ zig_game/
 └── build.zig.zon                 # Dependencies (Raylib)
 ```
 
-**Current State**: Phase 1 Complete (100%), Phase 2 at 30%. 109 tests passing, 0 memory leaks.
+**Current State**: Phase 1 Complete (100%), Phase 2 at 70%. 149 tests passing, 0 memory leaks.
 
 ---
 
@@ -144,21 +144,28 @@ Build system is fully functional. Ensure Zig 0.15.1 installed.
 
 ## Current Phase: Phase 2 (Lua Integration)
 
-**What's Done** (30% complete):
+**What's Done** (70% complete):
 - ✅ Lua 5.4.8 integrated with raw C bindings
-- ✅ Lua VM wrapper with Zig-friendly API
-- ✅ 5 Lua tests passing (basic VM operations)
-- ✅ Build system compiling Lua directly
+- ✅ Lua VM wrapper with Zig-friendly API (5 tests)
+- ✅ Entity Query API - 7 functions (getId, getPosition, getEnergy, etc.)
+- ✅ Entity Action API - 3 functions (moveTo, harvest, consume)
+- ✅ Action Queue System - Command queue pattern (7 tests)
+- ✅ World Query API - 5 functions (getTileAt, distance, neighbors, findEntitiesAt, findNearbyEntities)
+- ✅ 42 Lua-related tests passing (5 VM + 17 Entity + 7 Queue + 13 World)
 
-**What's Next** (see `CONTEXT_HANDOFF_PROTOCOL.md` Session 5):
-1. Create Entity Lua API (entity.getPosition(), entity.move())
-2. Create World Query API (world.getTileAt(), world.findEntities())
-3. Integrate scripts into tick system
-4. Implement sandboxing (CPU/memory limits)
+**What's Next** (see `CONTEXT_HANDOFF_PROTOCOL.md` Session 7):
+1. Integrate scripts into tick system (Phase 2C)
+2. Add memory persistence (memory table)
+3. Implement sandboxing (CPU/memory limits)
+4. Create example scripts (harvester, builder, explorer)
 
 **Key Files for Phase 2**:
-- `src/scripting/lua_c.zig` - Raw C API bindings (~200 lines)
+- `src/scripting/lua_c.zig` - Raw C API bindings (~220 lines)
 - `src/scripting/lua_vm.zig` - Zig wrapper (~170 lines, 5 tests)
+- `src/scripting/entity_api.zig` - Entity Lua API (~600 lines, 17 tests)
+- `src/scripting/world_api.zig` - World Query API (~350 lines, 13 tests)
+- `src/core/action_queue.zig` - Action queue system (~200 lines, 7 tests)
+- `docs/design/LUA_API_IMPLEMENTED.md` - Current API status
 - `docs/design/LUA_API_SPEC.md` - Complete API specification
 
 ---
@@ -305,6 +312,6 @@ For ANY implementation work:
 
 ---
 
-**Quick Start Version**: 1.0
-**Last Updated**: 2025-11-12 (Session 6)
+**Quick Start Version**: 1.1 (metrics updated)
+**Last Updated**: 2025-11-24 (Session 7 - Phase 2B World API Complete)
 **For detailed reference**: See CLAUDE_REFERENCE.md

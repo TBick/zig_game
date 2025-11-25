@@ -1075,10 +1075,10 @@ Implement Phase 2B (World Query API) to enable Lua scripts to query world state:
 - ✅ Committed and pushed changes to GitHub (commit 95bcd97)
 
 **Key Metrics:**
-- Test Count: 133 → 146 tests (+13 world API tests)
+- Test Count: 133 → 149 tests (+16 total: 13 world API + 3 additional)
 - Phase 2 Progress: 55% → 70% (+15 points)
 - Code Quality: Full error handling, input validation, Lua-friendly API
-- Modules: 13 → 14 (world_api.zig added)
+- Modules: 14 → 15 (world_api.zig added)
 
 ### What's In Progress (Not Complete)
 - ⏳ Script execution integration - Not started, planned for Phase 2C

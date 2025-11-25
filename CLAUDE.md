@@ -42,20 +42,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Reference
 
 ### Project Status
-- **Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 30%
-- **Tests**: 109 passing (100% pass rate, 0 memory leaks)
+- **Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 70%
+- **Tests**: 149 passing (100% pass rate, 0 memory leaks)
 - **Tech Stack**: Zig 0.15.1 + Lua 5.4 (raw C bindings) + Raylib 5.6.0
 
 ### Essential Commands
 ```bash
 zig build run              # Build and run
-zig build test             # Run all 109 tests
+zig build test             # Run all 149 tests
 git log --oneline -20      # Check recent work
 ```
 
 ### Current Focus (Phase 2)
-Next tasks: Entity Lua API, World Query API, script integration
-See [CONTEXT_HANDOFF_PROTOCOL.md](CONTEXT_HANDOFF_PROTOCOL.md) Session 5 for details.
+Next tasks: Script integration (Phase 2C), sandboxing, example scripts
+See [CONTEXT_HANDOFF_PROTOCOL.md](CONTEXT_HANDOFF_PROTOCOL.md) Session 7 for details.
 
 ---
 
@@ -84,6 +84,6 @@ CONTEXT_HANDOFF_ARCHIVE.md     # Archived sessions (1-2)
 
 ---
 
-**Version**: 2.0 (restructured for scannability)
-**Last Updated**: 2025-11-12 (Session 6 - Phase 2 Documentation Audit)
+**Version**: 2.1 (metrics updated)
+**Last Updated**: 2025-11-24 (Session 7 - Phase 2B World API Complete)
 **Previous Version**: See git history for monolithic CLAUDE.md v1.2
