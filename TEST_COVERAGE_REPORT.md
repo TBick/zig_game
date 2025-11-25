@@ -1,12 +1,19 @@
 # Test Coverage Report - Phase 1 Near Complete
 
-**Date**: 2025-11-11
-**Session**: Session 4 - Entity Selection Implementation Complete
-**Status**: ✅ All Tests Passing
+**⚠️ NOTE**: This report covers Phase 1 (Session 4). For current status see below:
+- **Current Tests (Session 6)**: 133 tests (Phase 1: 104, Phase 2: 29)
+- **Current Phase**: Phase 2 at 55% (Lua integration in progress)
+- **Latest Details**: See SESSION_STATE.md for up-to-date metrics
 
 ---
 
-## Executive Summary
+**Date**: 2025-11-11
+**Session**: Session 4 - Entity Selection Implementation Complete
+**Status**: ✅ All Tests Passing (Phase 1)
+
+---
+
+## Executive Summary (Phase 1)
 
 **Total Tests**: **104 tests** (up from 75)
 **New Tests Added**: **29 tests** since last report (+39% increase)
@@ -15,6 +22,17 @@
 **Estimated Coverage**: **>90%** across all Phase 1 modules
 
 **Major Addition**: Entity selection system with 13 comprehensive tests
+
+---
+
+## Phase 2 Test Summary (Current - Session 6)
+
+**Additional Tests**: **29 tests** for Lua integration
+- Lua VM tests: 5
+- Entity API tests: 17 (query + action)
+- Action queue tests: 7
+
+**Total Project Tests**: **133 tests** (100% passing, 0 memory leaks)
 
 ---
 

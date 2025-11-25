@@ -10,9 +10,9 @@ For detailed information, see [CLAUDE_REFERENCE.md](CLAUDE_REFERENCE.md).
 
 **Zig Game** - A Lua-scripted automation game where players write code to control autonomous entities.
 
-**Tech Stack**: Zig 0.15.1 + Lua 5.4 (raw C bindings) + Raylib 5.6.0
+**Tech Stack**: Zig 0.15.1 + Lua 5.4.8 (raw C bindings) + Raylib 5.6.0
 
-**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 30%
+**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 55%
 
 **Repository**: https://github.com/TBick/zig_game
 
@@ -60,7 +60,7 @@ After reading above, you know:
 # Build and run (Linux)
 zig build run
 
-# Run tests (109 tests)
+# Run tests (133 tests)
 zig build test
 
 # Build for Windows (better graphics)

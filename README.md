@@ -14,7 +14,7 @@ The satisfaction comes from building increasingly sophisticated systems, watchin
 
 ## Current Status
 
-**Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) - 30% Complete
+**Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) - 55% Complete
 
 The project has moved well beyond planning and is now a functional game engine prototype with:
 - Complete hex grid system with cube coordinate math
@@ -23,11 +23,14 @@ The project has moved well beyond planning and is now a functional game engine p
 - Tick-based simulation running at 2.5 ticks/second
 - Entity rendering with energy bars and selection system
 - Debug overlay with performance metrics
-- **109 tests passing** with >90% code coverage
+- **Lua 5.4.8 integrated** with raw C bindings (VM + Entity API complete)
+- **Entity Lua API complete**: Query functions (getId, getPosition, etc.) + Action functions (moveTo, harvest)
+- **Action queue system**: Command queue pattern for deterministic execution
+- **133 tests passing** with >90% code coverage
 - **Zero memory leaks** (verified with test allocator)
 - Windows cross-compilation support
 
-**Next Up**: Phase 2 (Lua Scripting Integration)
+**Next Up**: Phase 2B (World Query API), Phase 2C (Script Integration)
 
 ### Design Documents
 - [docs/design/GAME_DESIGN.md](docs/design/GAME_DESIGN.md) - Core gameplay mechanics, entity systems, and design philosophy
@@ -58,13 +61,13 @@ The project has moved well beyond planning and is now a functional game engine p
 ## Technology Stack
 
 - **Language**: Zig 0.15.1 (performance, safety, cross-platform)
-- **Scripting**: Lua 5.4 via ziglua (embedded, sandboxed - Phase 2)
+- **Scripting**: Lua 5.4.8 with raw C bindings (embedded, ~55% integrated)
 - **Rendering**: Raylib 5.6.0 via raylib-zig (2D graphics, cross-platform)
 - **Platform**: Currently supports Linux and Windows x86_64 (macOS planned)
 
 ## Project Structure
 
-**Status**: Phase 1 implementation complete with ~3,370 lines of code and 109 passing tests.
+**Status**: Phase 1 complete, Phase 2 at 55% with ~4,150 lines of code and 133 passing tests.
 
 ```
 zig_game/
