@@ -1054,6 +1054,268 @@ With Entity API complete, next session should focus on World Query API (Phase 2B
 
 ---
 
+## Session 7: 2025-11-24 - Phase 2B Complete: World Query API
+
+### Session Goal
+Implement Phase 2B (World Query API) to enable Lua scripts to query world state: tiles, distances, spatial entity searches.
+
+### What Was Accomplished
+
+**World Query API Implementation** (~350 lines, 13 tests):
+- ✅ Created `src/scripting/world_api.zig` with complete world query functionality
+- ✅ Implemented dual-context management (HexGrid + EntityManager pointers in registry)
+- ✅ 5 world query functions exposed to Lua:
+  - `world.getTileAt(q, r)` - Query tile at hex coordinate (supports table or separate args)
+  - `world.distance(pos1, pos2)` - Calculate hex distance between positions
+  - `world.neighbors(position)` - Get all 6 neighboring hex coordinates
+  - `world.findEntitiesAt(position)` - Find entities at specific position
+  - `world.findNearbyEntities(pos, range, role?)` - Spatial queries with optional role filter
+- ✅ Wrote 13 comprehensive integration tests covering all functions and edge cases
+- ✅ Updated all documentation (SESSION_STATE.md, LUA_API_IMPLEMENTED.md)
+- ✅ Committed and pushed changes to GitHub (commit 95bcd97)
+
+**Key Metrics:**
+- Test Count: 133 → 146 tests (+13 world API tests)
+- Phase 2 Progress: 55% → 70% (+15 points)
+- Code Quality: Full error handling, input validation, Lua-friendly API
+- Modules: 13 → 14 (world_api.zig added)
+
+### What's In Progress (Not Complete)
+- ⏳ Script execution integration - Not started, planned for Phase 2C
+- ⏳ Memory persistence (memory table) - Not started
+- ⏳ Sandboxing (CPU/memory limits) - Not started
+- ⏳ Example scripts - Not started
+
+### Critical Context for Next Session
+
+**World API Usage Pattern:**
+```zig
+// Setup (done once per script execution)
+var grid = HexGrid.init(allocator);
+var manager = EntityManager.init(allocator);
+
+world_api.setGridContext(vm.L, &grid);
+world_api.setEntityManagerContext(vm.L, &manager);
+world_api.registerWorldAPI(vm.L);
+
+// Lua scripts can now query world!
+try vm.doString(
+    \\local tile = world.getTileAt(5, 3)
+    \\if tile then
+    \\    local neighbors = world.neighbors(tile.coord)
+    \\    local nearby = world.findNearbyEntities(tile.coord, 5, "worker")
+    \\end
+);
+```
+
+**Lua Script Examples:**
+```lua
+-- Check if tile exists
+local tile = world.getTileAt(5, 3)
+if tile then
+    print("Tile at 5, 3")
+end
+
+-- Calculate distance
+local dist = world.distance({q=0, r=0}, {q=3, r=0})  -- Returns 3
+
+-- Get neighbors
+local neighbors = world.neighbors({q=5, r=5})  -- Returns 6 positions
+
+-- Find entities
+local entities_here = world.findEntitiesAt({q=10, r=10})
+local nearby_workers = world.findNearbyEntities({q=0, r=0}, 5, "worker")
+```
+
+**Files Modified:**
+- `src/scripting/world_api.zig` - NEW module (~350 lines, 13 tests)
+- `SESSION_STATE.md` - Updated progress 55% → 70%
+- `docs/design/LUA_API_IMPLEMENTED.md` - Added World API documentation
+
+### Decisions Made
+
+**Decision 1: Dual-Context Pattern for World API**
+- **Rationale**: World queries need both HexGrid (tiles) and EntityManager (entities)
+- **Implementation**: Store both pointers in Lua registry with separate keys
+- **Benefits**:
+  - Clean separation of concerns
+  - Independent lifecycle management
+  - Easy to extend with additional contexts later
+- **Alternative Rejected**: Single combined context struct - less flexible
+
+**Decision 2: Flexible getTileAt Arguments**
+- **Rationale**: Support both Lua table {q, r} and separate q, r arguments
+- **Benefits**:
+  - More ergonomic for Lua scripts (can use either style)
+  - Consistent with entity API patterns
+  - Easy to pass positions from other functions
+- **Implementation**: Check argument types and handle both cases
+
+**Decision 3: Optional Role Filter for findNearbyEntities**
+- **Rationale**: Common use case is finding entities of specific type
+- **Benefits**:
+  - Single function handles both filtered and unfiltered queries
+  - Avoids API proliferation (no separate findNearbyWorkers, etc.)
+  - Lua-friendly optional parameter pattern
+- **Alternative Rejected**: Separate function per role - too many functions
+
+**Decision 4: Stack Buffers for Entity Queries**
+- **Rationale**: Avoid heap allocations for temporary result arrays
+- **Implementation**: Use 100-element stack buffers for entity ID arrays
+- **Trade-off**: Limits results to 100 entities, but sufficient for typical queries
+- **Benefits**: No allocation overhead, simpler memory management
+
+### Blockers / Issues
+
+**No Current Blockers** - All World API functions implemented and tested
+
+**Known Issues (Inherited from Session 6):**
+1. **consume() Allocator Limitation** (Low Priority)
+   - Still deferred to Phase 3 when resources are implemented
+   - No impact on World API work
+
+2. **Bash Working Directory Issues** (Tooling)
+   - Workaround working: Use `git -C /full/path` commands
+   - Tests written comprehensively following established patterns
+
+3. **No Automatic Action Execution** (Expected)
+   - Actions still queued but not auto-processed
+   - Phase 2C will integrate into tick system
+
+### Recommended Next Steps
+
+**Immediate (Next Session - Phase 2C: Script Integration)**
+
+1. **Integrate Lua VM into EntityManager**:
+   - Add LuaVM field to EntityManager
+   - Initialize VM in EntityManager.init()
+   - Clean up VM in EntityManager.deinit()
+
+2. **Per-Entity Script Execution**:
+   - Add script field to Entity struct (Lua code string)
+   - Execute entity script in processTick()
+   - Set up entity context, action queue, world contexts
+   - Call registerEntityAPI() and registerWorldAPI()
+   - Execute script with doString()
+
+3. **Memory Persistence**:
+   - Create persistent 'memory' table for each entity
+   - Store in Lua registry with entity-specific key
+   - Restore memory table before script execution
+   - Preserve across ticks
+
+4. **Error Handling**:
+   - Catch Lua errors gracefully
+   - Log errors without crashing game
+   - Continue executing other entities' scripts
+
+**Short-Term (Phase 2D: Sandboxing)**
+
+5. **CPU Limits**:
+   - Implement lua_sethook with instruction counting
+   - Set limit to 10,000 instructions per tick
+   - Test that scripts are terminated when exceeding limit
+
+6. **Memory Limits**:
+   - Custom allocator with memory tracking
+   - Set limit to 1MB per entity
+   - Test enforcement
+
+7. **Stdlib Restriction**:
+   - Remove dangerous functions (io, os, debug)
+   - Keep safe functions (math, string, table)
+
+**Medium-Term (Phase 2E: Examples & Polish)**
+
+8. **Example Scripts**:
+   - Harvester bot (finds resources, harvests, returns to base)
+   - Patrol bot (moves in pattern using world.neighbors)
+   - Scout bot (explores using world.findNearbyEntities)
+
+9. **Action Execution**:
+   - Process queued actions after all scripts run
+   - Integrate with existing tick system
+
+### Files Modified
+
+**Created:**
+- `src/scripting/world_api.zig` (~350 lines, 13 tests) - World Query API
+
+**Modified:**
+- `SESSION_STATE.md` - Comprehensive progress update (55% → 70%)
+- `docs/design/LUA_API_IMPLEMENTED.md` - World API section and examples
+- `CONTEXT_HANDOFF_PROTOCOL.md` - This handoff entry
+
+**Committed:**
+- Commit 95bcd97: "Phase 2B: Implement World Query API for Lua scripts"
+
+### Agents Used
+**None** - Direct implementation was appropriate:
+- Well-defined API specification
+- Clear patterns from entity_api.zig to follow
+- Straightforward spatial query logic
+- ~2 hours of focused work
+
+### Notes
+
+**Session Success:**
+Phase 2B (World Query API) is now complete! Lua scripts have full read access to game state:
+- Entity state via Entity API (Phase 2A)
+- World state via World API (Phase 2B)
+
+This is a major milestone - scripts can now make informed decisions based on complete world information.
+
+**Challenges Overcome:**
+1. **Dual-Context Management**: Successfully implemented pattern for storing multiple context pointers
+2. **Flexible Arguments**: getTileAt handles both table and separate arguments cleanly
+3. **Stack Buffer Limits**: 100-entity limit is pragmatic trade-off for better performance
+4. **Bash Tool Issues**: Continued to work around with git -C commands
+
+**What Went Well:**
+- World API implementation followed established patterns perfectly
+- 13 comprehensive tests ensure robust functionality
+- Documentation kept up-to-date throughout
+- Clean commit with detailed message
+- API design is Lua-friendly and intuitive
+
+**Lessons Learned:**
+1. **Dual-Context Pattern Works**: Storing multiple pointers in registry is clean and flexible
+2. **Optional Parameters**: Role filter pattern avoids API proliferation
+3. **Stack Buffers Are Pragmatic**: 100-entity limit is reasonable for typical queries
+4. **Test-Driven Development**: Writing tests first clarifies API design
+5. **Consistent Patterns**: Following entity_api.zig patterns ensures consistency
+
+**Time Spent:**
+- API design and planning: ~20 tool calls
+- world_api.zig implementation: ~30 tool calls
+- Test writing: ~20 tool calls
+- Documentation updates: ~25 tool calls
+- Git commit/push: ~10 tool calls
+- Total: ~105 tool calls in single session
+
+**Phase 2 Velocity:**
+70% complete after 3 development sessions (Session 5: 30%, Session 6: +25%, Session 7: +15%).
+Excellent progress. On track to complete Phase 2 in Sessions 8-9.
+
+**Technical Quality:**
+- Memory-safe world queries with proper context management
+- Comprehensive input validation (table structure, type checking)
+- Graceful error handling (return nil, not crash)
+- Well-tested (13 tests covering all functions and edge cases)
+- Clean API (Lua-friendly, intuitive naming, consistent with entity API)
+
+**Ready for Next Session:**
+With Entity API + World API complete, next session should focus on script integration (Phase 2C):
+- Integrate VM into EntityManager
+- Execute per-entity scripts each tick
+- Memory persistence (memory table)
+- Error handling for script failures
+
+**Phase 2B Status**: ✅ COMPLETE (100%)
+**Phase 2 Overall**: 🔄 IN PROGRESS (70%)
+
+---
+
 ## Archive Policy
 
 Sessions are archived after completion of major phases to keep this file manageable:
