@@ -18,6 +18,7 @@ const TickScheduler = @import("core/tick_scheduler.zig").TickScheduler;
 // Input and UI imports
 const EntitySelector = @import("input/entity_selector.zig").EntitySelector;
 const EntityInfoPanel = @import("ui/entity_info_panel.zig").EntityInfoPanel;
+const InputHandler = @import("input/input_handler.zig").InputHandler;
 
 // Test discovery: Ensure all module tests are included
 test {
@@ -27,6 +28,7 @@ test {
     std.testing.refAllDecls(@import("rendering/entity_renderer.zig"));
     std.testing.refAllDecls(@import("core/tick_scheduler.zig"));
     std.testing.refAllDecls(@import("input/entity_selector.zig"));
+    std.testing.refAllDecls(@import("input/input_handler.zig"));
     std.testing.refAllDecls(@import("ui/entity_info_panel.zig"));
 }
 
@@ -81,12 +83,9 @@ pub fn main() !void {
     // Initialize debug overlay
     var debug_overlay = DebugOverlay.init();
 
-    // Initialize entity selection system
-    var entity_selector = EntitySelector.init();
+    // Initialize input handler (replaces entity_selector, last_mouse_pos, and all input code)
+    var input_handler = InputHandler.init(&hex_renderer.camera);
     var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
-
-    // Camera controls
-    var last_mouse_pos = rl.getMousePosition();
 
     // Main game loop
     while (!rl.windowShouldClose()) {
@@ -104,84 +103,22 @@ pub fn main() !void {
         }
 
         // ====================================================================
-        // INPUT & CAMERA (Runs every frame for smooth response)
-        // ====================================================================
-
-        const mouse_pos = rl.getMousePosition();
-
-        // Camera panning (right mouse button for drag)
-        if (rl.isMouseButtonDown(rl.MouseButton.right)) {
-            const dx = mouse_pos.x - last_mouse_pos.x;
-            const dy = mouse_pos.y - last_mouse_pos.y;
-            hex_renderer.camera.pan(-dx, -dy);
-        }
-
-        // Camera zoom (mouse wheel)
-        const wheel = rl.getMouseWheelMove();
-        if (wheel != 0) {
-            const zoom_factor: f32 = if (wheel > 0) 1.1 else 0.9;
-            hex_renderer.camera.zoomBy(zoom_factor);
-        }
-
-        // Keyboard camera controls
-        // Scale by delta time for frame-rate independence
-        const base_speed = 400.0; // pixels per second
-        const pan_speed = base_speed * @as(f32, @floatCast(frame_time));
-
-        if (rl.isKeyDown(rl.KeyboardKey.left) or rl.isKeyDown(rl.KeyboardKey.a)) {
-            hex_renderer.camera.pan(-pan_speed, 0);
-        }
-        if (rl.isKeyDown(rl.KeyboardKey.right) or rl.isKeyDown(rl.KeyboardKey.d)) {
-            hex_renderer.camera.pan(pan_speed, 0);
-        }
-        if (rl.isKeyDown(rl.KeyboardKey.up) or rl.isKeyDown(rl.KeyboardKey.w)) {
-            hex_renderer.camera.pan(0, -pan_speed);
-        }
-        if (rl.isKeyDown(rl.KeyboardKey.down) or rl.isKeyDown(rl.KeyboardKey.s)) {
-            hex_renderer.camera.pan(0, pan_speed);
-        }
-
-        // Keyboard zoom
-        if (rl.isKeyDown(rl.KeyboardKey.equal) or rl.isKeyDown(rl.KeyboardKey.kp_add)) {
-            hex_renderer.camera.zoomBy(1.02);
-        }
-        if (rl.isKeyDown(rl.KeyboardKey.minus) or rl.isKeyDown(rl.KeyboardKey.kp_subtract)) {
-            hex_renderer.camera.zoomBy(0.98);
-        }
-
-        // Reset camera
-        if (rl.isKeyPressed(rl.KeyboardKey.r)) {
-            hex_renderer.camera = @import("rendering/hex_renderer.zig").Camera.init();
-        }
-
-        // Toggle debug overlay with F3
-        if (rl.isKeyPressed(rl.KeyboardKey.f3)) {
-            debug_overlay.toggle();
-        }
-
-        // Update debug overlay
-        debug_overlay.update();
-
-        // ====================================================================
-        // ENTITY SELECTION (Mouse click to select entities)
+        // INPUT (Runs every frame for smooth response)
         // ====================================================================
 
         // Get current window dimensions for coordinate transformations
         const current_width = rl.getScreenWidth();
         const current_height = rl.getScreenHeight();
 
-        // Update entity selection based on mouse input
-        entity_selector.update(
-            mouse_pos,
-            rl.isMouseButtonPressed(rl.MouseButton.left),
+        // Centralized input handling (camera, selection, debug)
+        input_handler.update(
+            @floatCast(frame_time),
             &entity_manager,
-            &hex_renderer.camera,
             &hex_renderer.layout,
+            &debug_overlay,
             current_width,
             current_height,
         );
-
-        last_mouse_pos = mouse_pos;
 
         // ====================================================================
         // RENDERING (Runs every frame at 60 FPS)
@@ -195,7 +132,7 @@ pub fn main() !void {
         hex_renderer.drawGrid(&grid, current_width, current_height);
 
         // Draw entities with selection highlighting
-        const selected_entity = entity_selector.getSelected(&entity_manager);
+        const selected_entity = input_handler.getSelectedEntity(&entity_manager);
         for (entity_manager.getAliveEntities()) |*entity| {
             const is_selected = if (selected_entity) |sel| sel.id == entity.id else false;
             entity_renderer.drawEntityWithSelection(
