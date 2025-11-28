@@ -262,7 +262,8 @@ pub const HexRenderer = struct {
 
     /// Draw optimized edges for a set of drawable tiles
     /// Uses Edge Ownership Rule: each tile only draws edges in directions 0, 1, 2 (E, NE, NW)
-    /// This eliminates duplicate edge drawing (50% reduction in draw calls)
+    /// PLUS boundary edges (edges with no neighbor)
+    /// This eliminates duplicate edge drawing while ensuring boundary edges are rendered
     pub fn drawOptimizedEdges(
         self: *HexRenderer,
         drawable_set: *const DrawableTileSet,
@@ -275,12 +276,25 @@ pub const HexRenderer = struct {
         while (it.next()) |coord_ptr| {
             const coord = coord_ptr.*;
 
-            // Edge Ownership Rule: Only draw edges in directions 0, 1, 2
-            // Direction 0 = E, Direction 1 = NE, Direction 2 = NW
-            for (0..3) |dir| {
+            // For each edge direction, decide if this tile should draw it
+            for (0..6) |dir| {
                 const direction: u3 = @intCast(dir);
-                const color = self.getTileEdgeColor(coord, direction, drawable_set, selected_tile, hovered_tile);
-                self.drawEdgeSegment(coord, direction, color, screen_width, screen_height);
+
+                // Check if neighbor exists in drawable set
+                const neighbor = coord.neighbor(direction);
+                const has_neighbor = drawable_set.contains(neighbor);
+
+                // Draw edge if:
+                // 1. No neighbor exists (boundary edge), OR
+                // 2. This tile owns the edge (directions 0, 1, 2)
+                const is_boundary = !has_neighbor;
+                const owns_edge = direction < 3; // directions 0, 1, 2
+                const should_draw = is_boundary or owns_edge;
+
+                if (should_draw) {
+                    const color = self.getTileEdgeColor(coord, direction, drawable_set, selected_tile, hovered_tile);
+                    self.drawEdgeSegment(coord, direction, color, screen_width, screen_height);
+                }
             }
         }
     }
