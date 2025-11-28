@@ -130,16 +130,53 @@ pub fn main() !void {
 
         rl.clearBackground(rl.Color.init(30, 30, 40, 255));
 
-        // Draw hex grid
-        hex_renderer.drawGrid(&grid, current_width, current_height);
+        // Draw hex grid with hover/selection highlighting
+        const hovered_tile = input_handler.getHoveredTile();
+        const selected_tile = input_handler.getSelectedTile();
 
-        // Draw entities with selection highlighting
+        var it = grid.tiles.iterator();
+        while (it.next()) |entry| {
+            const coord = entry.key_ptr.*;
+
+            // Determine tile state for visual feedback
+            const is_selected = if (selected_tile) |sel| sel.q == coord.q and sel.r == coord.r else false;
+            const is_hovered = if (hovered_tile) |hov| hov.q == coord.q and hov.r == coord.r else false;
+
+            // Choose colors based on state
+            const fill_color = if (is_selected)
+                rl.Color.init(80, 120, 180, 255) // Selected: blue
+            else if (is_hovered)
+                rl.Color.init(70, 70, 90, 255) // Hovered: lighter gray
+            else
+                rl.Color.dark_gray; // Normal: dark gray
+
+            const outline_color = if (is_selected)
+                rl.Color.init(120, 180, 255, 255) // Selected: bright blue
+            else if (is_hovered)
+                rl.Color.init(150, 150, 170, 255) // Hovered: bright gray
+            else
+                rl.Color.light_gray; // Normal: light gray
+
+            // Draw tile
+            hex_renderer.drawHexFilled(coord, fill_color, current_width, current_height);
+            hex_renderer.drawHexOutline(coord, outline_color, current_width, current_height);
+        }
+
+        // Draw entities with hover AND selection highlighting
         const selected_entity = input_handler.getSelectedEntity(&entity_manager);
+        const hovered_entity = input_handler.getHoveredEntity(&entity_manager);
+
         for (entity_manager.getAliveEntities()) |*entity| {
             const is_selected = if (selected_entity) |sel| sel.id == entity.id else false;
+            const is_hovered = if (hovered_entity) |hov| hov.id == entity.id else false;
+
+            // For now, use selection highlighting for both hover and selection
+            // TODO: Add separate hover visual in entity_renderer
+            const show_highlight = is_selected or is_hovered;
+
             entity_renderer.drawEntityWithSelection(
                 entity,
-                is_selected,
+                show_highlight,
                 &hex_renderer.camera,
                 &hex_renderer.layout,
                 current_width,
@@ -148,9 +185,9 @@ pub fn main() !void {
         }
 
         // Draw UI
-        rl.drawText("Zig Game - Phase 1: Entity Selection", 10, 180, 20, rl.Color.ray_white);
-        rl.drawText("Left Click: Select Entity  |  Right Drag: Pan  |  Wheel/+/-: Zoom", 10, 210, 14, rl.Color.light_gray);
-        rl.drawText("WASD/Arrows: Pan  |  R: Reset  |  F3: Debug  |  ESC: Exit", 10, 230, 14, rl.Color.light_gray);
+        rl.drawText("Zig Game - Advanced Input System", 10, 180, 20, rl.Color.ray_white);
+        rl.drawText("Hover: Preview tiles/entities  |  Left Click: Select  |  Right Drag: Pan", 10, 210, 14, rl.Color.light_gray);
+        rl.drawText("WASD/Arrows: Pan  |  Wheel/+/-: Zoom  |  R: Reset  |  F3: Debug", 10, 230, 14, rl.Color.light_gray);
 
         // Draw camera info
         const cam_y = current_height - 80;
