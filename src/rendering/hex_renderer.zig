@@ -272,9 +272,15 @@ pub const HexRenderer = struct {
         screen_width: i32,
         screen_height: i32,
     ) void {
+        const debug = false; // Set to true to enable debug prints
+
         var it = drawable_set.iterator();
         while (it.next()) |coord_ptr| {
             const coord = coord_ptr.*;
+
+            if (debug) {
+                std.debug.print("\n=== Tile ({d},{d}) ===\n", .{ coord.q, coord.r });
+            }
 
             // Draw owned edges (0, 1, 2) for all tiles
             // Draw non-owned edges (3, 4, 5) only for boundary tiles
@@ -291,6 +297,18 @@ pub const HexRenderer = struct {
                     true // Always draw owned edges
                 else
                     !has_neighbor; // Only draw non-owned edges at boundaries
+
+                if (debug) {
+                    const dir_names = [_][]const u8{ "E", "NE", "NW", "W", "SW", "SE" };
+                    std.debug.print("  Dir {d} ({s}): neighbor=({d},{d}) has_neighbor={} should_draw={}\n", .{
+                        direction,
+                        dir_names[direction],
+                        neighbor.q,
+                        neighbor.r,
+                        has_neighbor,
+                        should_draw,
+                    });
+                }
 
                 if (should_draw) {
                     const color = self.getTileEdgeColor(coord, direction, drawable_set, selected_tile, hovered_tile);
