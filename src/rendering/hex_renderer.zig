@@ -276,20 +276,21 @@ pub const HexRenderer = struct {
         while (it.next()) |coord_ptr| {
             const coord = coord_ptr.*;
 
-            // For each edge direction, decide if this tile should draw it
+            // Draw owned edges (0, 1, 2) for all tiles
+            // Draw non-owned edges (3, 4, 5) only for boundary tiles
             for (0..6) |dir| {
                 const direction: u3 = @intCast(dir);
 
-                // Check if neighbor exists in drawable set
+                // Check if neighbor exists
                 const neighbor = coord.neighbor(direction);
                 const has_neighbor = drawable_set.contains(neighbor);
 
-                // Draw edge if:
-                // 1. No neighbor exists (boundary edge), OR
-                // 2. This tile owns the edge (directions 0, 1, 2)
-                const is_boundary = !has_neighbor;
-                const owns_edge = direction < 3; // directions 0, 1, 2
-                const should_draw = is_boundary or owns_edge;
+                // Always draw owned edges (0, 1, 2)
+                // Only draw non-owned edges (3, 4, 5) if no neighbor
+                const should_draw = if (direction <= 2)
+                    true // Always draw owned edges
+                else
+                    !has_neighbor; // Only draw non-owned edges at boundaries
 
                 if (should_draw) {
                     const color = self.getTileEdgeColor(coord, direction, drawable_set, selected_tile, hovered_tile);
