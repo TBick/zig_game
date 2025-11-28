@@ -5,6 +5,7 @@ const EntitySelector = @import("entity_selector.zig").EntitySelector;
 const TileSelector = @import("tile_selector.zig").TileSelector;
 const EntityManager = @import("../entities/entity_manager.zig").EntityManager;
 const Entity = @import("../entities/entity.zig").Entity;
+const EntityId = @import("../entities/entity.zig").EntityId;
 const HexLayout = @import("../rendering/hex_renderer.zig").HexLayout;
 const DebugOverlay = @import("../ui/debug_overlay.zig").DebugOverlay;
 const HexGrid = @import("../world/hex_grid.zig").HexGrid;
@@ -44,12 +45,18 @@ pub const InputHandler = struct {
         // Update camera controls (mouse + keyboard)
         self.updateCamera(frame_time);
 
-        // Update tile hover/selection (runs before entity selection for proper priority)
+        // Update tile hover/selection (runs before entity for baseline)
         self.updateTileSelection(grid, layout, screen_width, screen_height);
 
-        // Update entity selection (delegate to EntitySelector)
+        // Update entity selection/hover (delegate to EntitySelector)
         // Entity selection takes priority - if entity clicked, clear tile selection
         self.updateSelection(entity_manager, layout, screen_width, screen_height);
+
+        // Apply hover priority: Entity hover > Tile hover
+        // If an entity is hovered, clear tile hover (only show one at a time)
+        if (self.entity_selector.hasHover()) {
+            self.tile_selector.clearHover();
+        }
 
         // Update debug controls (F3 toggle)
         self.updateDebug(debug_overlay);
@@ -61,6 +68,16 @@ pub const InputHandler = struct {
     /// Get currently selected entity (delegates to EntitySelector)
     pub fn getSelectedEntity(self: *const InputHandler, manager: *EntityManager) ?*Entity {
         return self.entity_selector.getSelected(manager);
+    }
+
+    /// Get currently hovered entity (delegates to EntitySelector)
+    pub fn getHoveredEntity(self: *const InputHandler, manager: *EntityManager) ?*Entity {
+        return self.entity_selector.getHovered(manager);
+    }
+
+    /// Check if a specific entity is currently hovered
+    pub fn isEntityHovered(self: *const InputHandler, entity_id: EntityId) bool {
+        return self.entity_selector.isHovered(entity_id);
     }
 
     /// Get currently hovered tile coordinate (null if none)
@@ -370,4 +387,58 @@ test "InputHandler.updateDebug calls debug overlay" {
     handler.updateDebug(&debug_overlay);
 
     try std.testing.expect(true);
+}
+
+// ============================================================================
+// Unified Hover Priority Tests
+// ============================================================================
+
+test "InputHandler.getHoveredEntity delegates to EntitySelector" {
+    const allocator = std.testing.allocator;
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    var camera = Camera.init();
+    var handler = InputHandler.init(&camera);
+
+    const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    handler.entity_selector.hovered_entity_id = id;
+
+    const hovered = handler.getHoveredEntity(&manager);
+    try std.testing.expect(hovered != null);
+    try std.testing.expectEqual(id, hovered.?.id);
+}
+
+test "InputHandler.isEntityHovered delegates to EntitySelector" {
+    var camera = Camera.init();
+    var handler = InputHandler.init(&camera);
+
+    const id: EntityId = 42;
+    handler.entity_selector.hovered_entity_id = id;
+
+    try std.testing.expect(handler.isEntityHovered(id));
+    try std.testing.expect(!handler.isEntityHovered(99));
+}
+
+test "InputHandler.hover priority: entity hover clears tile hover" {
+    var camera = Camera.init();
+    var handler = InputHandler.init(&camera);
+
+    // Preset both tile and entity hover
+    handler.tile_selector.hovered_tile = HexCoord{ .q = 2, .r = 2 };
+    handler.entity_selector.hovered_entity_id = 42;
+
+    // Verify both are set initially
+    try std.testing.expect(handler.tile_selector.hasHover());
+    try std.testing.expect(handler.entity_selector.hasHover());
+
+    // Apply the priority logic manually (same as what update() does)
+    if (handler.entity_selector.hasHover()) {
+        handler.tile_selector.clearHover();
+    }
+
+    // Entity hover should remain
+    try std.testing.expect(handler.entity_selector.hasHover());
+    // Tile hover should be cleared (entity priority)
+    try std.testing.expect(!handler.tile_selector.hasHover());
 }

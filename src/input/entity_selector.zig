@@ -7,18 +7,20 @@ const HexCoord = @import("../world/hex_grid.zig").HexCoord;
 const Camera = @import("../rendering/hex_renderer.zig").Camera;
 const HexLayout = @import("../rendering/hex_renderer.zig").HexLayout;
 
-/// Handles entity selection via mouse input
+/// Handles entity selection and hover detection via mouse input
 pub const EntitySelector = struct {
     selected_entity_id: ?EntityId,
+    hovered_entity_id: ?EntityId,
 
-    /// Initialize entity selector with no selection
+    /// Initialize entity selector with no selection or hover
     pub fn init() EntitySelector {
         return EntitySelector{
             .selected_entity_id = null,
+            .hovered_entity_id = null,
         };
     }
 
-    /// Update selection based on mouse input
+    /// Update selection and hover based on mouse input
     /// Call this each frame after processing camera input
     pub fn update(
         self: *EntitySelector,
@@ -30,9 +32,6 @@ pub const EntitySelector = struct {
         screen_width: i32,
         screen_height: i32,
     ) void {
-        // Only process if mouse was clicked this frame
-        if (!mouse_clicked) return;
-
         // Convert screen position to world position
         const world_pos = camera.screenToWorld(mouse_pos.x, mouse_pos.y, screen_width, screen_height);
 
@@ -44,12 +43,22 @@ pub const EntitySelector = struct {
         var entity_ids: [10]EntityId = undefined;
         const entity_count = entity_manager.getEntitiesAt(hex_coord, &entity_ids);
 
+        // Update hover state (every frame)
         if (entity_count > 0) {
-            // Select the first entity at this position
-            self.selected_entity_id = entity_ids[0];
+            self.hovered_entity_id = entity_ids[0];
         } else {
-            // Clicked on empty space - deselect
-            self.selected_entity_id = null;
+            self.hovered_entity_id = null;
+        }
+
+        // Update selection state (only on click)
+        if (mouse_clicked) {
+            if (entity_count > 0) {
+                // Select the first entity at this position
+                self.selected_entity_id = entity_ids[0];
+            } else {
+                // Clicked on empty space - deselect
+                self.selected_entity_id = null;
+            }
         }
     }
 
@@ -79,6 +88,33 @@ pub const EntitySelector = struct {
         }
         return false;
     }
+
+    /// Get the currently hovered entity
+    /// Returns null if no entity is hovered or if the hovered entity no longer exists
+    pub fn getHovered(self: *const EntitySelector, manager: *EntityManager) ?*Entity {
+        if (self.hovered_entity_id) |id| {
+            return manager.getEntity(id);
+        }
+        return null;
+    }
+
+    /// Check if any entity is currently hovered
+    pub fn hasHover(self: *const EntitySelector) bool {
+        return self.hovered_entity_id != null;
+    }
+
+    /// Check if a specific entity is hovered
+    pub fn isHovered(self: *const EntitySelector, entity_id: EntityId) bool {
+        if (self.hovered_entity_id) |id| {
+            return id == entity_id;
+        }
+        return false;
+    }
+
+    /// Clear the current hover
+    pub fn clearHover(self: *EntitySelector) void {
+        self.hovered_entity_id = null;
+    }
 };
 
 // ============================================================================
@@ -88,7 +124,9 @@ pub const EntitySelector = struct {
 test "EntitySelector.init" {
     const selector = EntitySelector.init();
     try std.testing.expect(!selector.hasSelection());
+    try std.testing.expect(!selector.hasHover());
     try std.testing.expectEqual(@as(?EntityId, null), selector.selected_entity_id);
+    try std.testing.expectEqual(@as(?EntityId, null), selector.hovered_entity_id);
 }
 
 test "EntitySelector.deselect" {
@@ -267,4 +305,123 @@ test "EntitySelector.update with no click" {
 
     // Selection should not change
     try std.testing.expectEqual(@as(?EntityId, 42), selector.selected_entity_id);
+}
+
+// ============================================================================
+// Hover Tests
+// ============================================================================
+
+test "EntitySelector.hasHover" {
+    var selector = EntitySelector.init();
+    try std.testing.expect(!selector.hasHover());
+
+    selector.hovered_entity_id = 1;
+    try std.testing.expect(selector.hasHover());
+
+    selector.hovered_entity_id = null;
+    try std.testing.expect(!selector.hasHover());
+}
+
+test "EntitySelector.isHovered" {
+    var selector = EntitySelector.init();
+
+    // No hover
+    try std.testing.expect(!selector.isHovered(1));
+    try std.testing.expect(!selector.isHovered(2));
+
+    // Hover entity 1
+    selector.hovered_entity_id = 1;
+    try std.testing.expect(selector.isHovered(1));
+    try std.testing.expect(!selector.isHovered(2));
+
+    // Hover entity 2
+    selector.hovered_entity_id = 2;
+    try std.testing.expect(!selector.isHovered(1));
+    try std.testing.expect(selector.isHovered(2));
+}
+
+test "EntitySelector.clearHover" {
+    var selector = EntitySelector.init();
+    selector.hovered_entity_id = 42;
+
+    selector.clearHover();
+    try std.testing.expect(!selector.hasHover());
+    try std.testing.expectEqual(@as(?EntityId, null), selector.hovered_entity_id);
+}
+
+test "EntitySelector.getHovered with no hover" {
+    const allocator = std.testing.allocator;
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    const selector = EntitySelector.init();
+    try std.testing.expect(selector.getHovered(&manager) == null);
+}
+
+test "EntitySelector.getHovered with valid hover" {
+    const allocator = std.testing.allocator;
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    const id = try manager.spawn(HexCoord{ .q = 0, .r = 0 }, .worker);
+    var selector = EntitySelector.init();
+    selector.hovered_entity_id = id;
+
+    const entity = selector.getHovered(&manager);
+    try std.testing.expect(entity != null);
+    try std.testing.expectEqual(id, entity.?.id);
+}
+
+test "EntitySelector.update updates hover without click" {
+    const allocator = std.testing.allocator;
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    // Spawn entity at (2, 3)
+    _ = try manager.spawn(HexCoord{ .q = 2, .r = 3 }, .worker);
+
+    const camera = Camera.init();
+    const layout = HexLayout.init(30.0, true);
+
+    var selector = EntitySelector.init();
+
+    // Simulate mouse over entity without clicking
+    const world_pos = layout.hexToPixel(HexCoord{ .q = 2, .r = 3 });
+    const screen_pos = camera.worldToScreen(world_pos.x, world_pos.y, 800, 600);
+
+    selector.update(
+        rl.Vector2{ .x = screen_pos.x, .y = screen_pos.y },
+        false, // No click
+        &manager,
+        &camera,
+        &layout,
+        800,
+        600,
+    );
+
+    // Hover should be set
+    try std.testing.expect(selector.hasHover());
+    // Selection should remain null (no click)
+    try std.testing.expect(!selector.hasSelection());
+}
+
+test "EntitySelector.hover and selection are independent" {
+    const allocator = std.testing.allocator;
+    var manager = try EntityManager.init(allocator);
+    defer manager.deinit();
+
+    const id1 = try manager.spawn(HexCoord{ .q = 1, .r = 1 }, .worker);
+    const id2 = try manager.spawn(HexCoord{ .q = 2, .r = 2 }, .combat);
+
+    var selector = EntitySelector.init();
+    selector.selected_entity_id = id1;
+    selector.hovered_entity_id = id2;
+
+    // Both should be set to different entities
+    try std.testing.expect(selector.hasSelection());
+    try std.testing.expect(selector.hasHover());
+    try std.testing.expect(selector.isSelected(id1));
+    try std.testing.expect(selector.isHovered(id2));
+    try std.testing.expect(!selector.isSelected(id2));
+    try std.testing.expect(!selector.isHovered(id1));
 }
