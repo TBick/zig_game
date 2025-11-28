@@ -36,7 +36,7 @@ pub const LUA_ERRMEM = 4;
 pub const LUA_ERRERR = 5;
 
 // C function type for Lua
-pub const lua_CFunction = *const fn (?*lua_State) callconv(.C) c_int;
+pub const lua_CFunction = *const fn (?*lua_State) callconv(.c) c_int;
 
 // === State manipulation ===
 extern fn luaL_newstate() ?*lua_State;
@@ -85,6 +85,14 @@ pub const isInteger = lua_isinteger;
 pub const isUserdata = lua_isuserdata;
 pub const typeOf = lua_type;
 pub const typeName = lua_typename;
+
+pub fn isTable(L: ?*lua_State, idx: c_int) bool {
+    return lua_type(L, idx) == LUA_TTABLE;
+}
+
+pub fn isLightuserdata(L: ?*lua_State, idx: c_int) bool {
+    return lua_type(L, idx) == LUA_TLIGHTUSERDATA;
+}
 
 pub fn isNoneOrNil(L: ?*lua_State, idx: c_int) bool {
     return lua_type(L, idx) <= 0;
@@ -166,8 +174,10 @@ pub const setI = lua_seti;
 
 // === Table operations ===
 extern fn lua_createtable(L: ?*lua_State, narr: c_int, nrec: c_int) void;
+extern fn lua_rawgeti(L: ?*lua_State, idx: c_int, n: lua_Integer) c_int;
 
 pub const createTable = lua_createtable;
+pub const rawGetI = lua_rawgeti;
 
 pub fn newTable(L: ?*lua_State) void {
     lua_createtable(L, 0, 0);
@@ -186,9 +196,13 @@ pub fn pcall(L: ?*lua_State, nargs: c_int, nresults: c_int, msgh: c_int) c_int {
 // === Auxiliary library ===
 extern fn luaL_openlibs(L: ?*lua_State) void;
 extern fn luaL_requiref(L: ?*lua_State, modname: [*c]const u8, openf: lua_CFunction, glb: c_int) void;
+extern fn luaL_ref(L: ?*lua_State, t: c_int) c_int;
+extern fn luaL_unref(L: ?*lua_State, t: c_int, ref: c_int) void;
 
 pub const openLibs = luaL_openlibs;
 pub const requireF = luaL_requiref;
+pub const ref = luaL_ref;
+pub const unref = luaL_unref;
 
 // === Utilities ===
 

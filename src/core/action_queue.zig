@@ -38,7 +38,7 @@ pub const ActionQueue = struct {
     /// Create a new action queue
     pub fn init(allocator: std.mem.Allocator) ActionQueue {
         return ActionQueue{
-            .items = std.ArrayList(EntityAction).init(allocator),
+            .items = std.ArrayList(EntityAction){},
             .allocator = allocator,
         };
     }
@@ -54,12 +54,12 @@ pub const ActionQueue = struct {
                 else => {},
             }
         }
-        self.items.deinit();
+        self.items.deinit(self.allocator);
     }
 
     /// Add an action to the queue
     pub fn add(self: *ActionQueue, action: EntityAction) !void {
-        try self.items.append(action);
+        try self.items.append(self.allocator, action);
     }
 
     /// Clear all queued actions

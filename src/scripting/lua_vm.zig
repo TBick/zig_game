@@ -119,7 +119,7 @@ pub const LuaVM = struct {
         const name_z = try self.allocator.dupeZ(u8, name);
         defer self.allocator.free(name_z);
 
-        lua.pushLString(L, value.ptr, value.len);
+        _ = lua.pushLString(L, value.ptr, value.len);
         lua.setGlobal(L, name_z.ptr);
     }
 };
