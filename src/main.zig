@@ -30,6 +30,7 @@ test {
     std.testing.refAllDecls(@import("entities/entity_manager.zig"));
     std.testing.refAllDecls(@import("rendering/entity_renderer.zig"));
     std.testing.refAllDecls(@import("rendering/game_renderer.zig"));
+    std.testing.refAllDecls(@import("rendering/drawable_tile_set.zig"));
     std.testing.refAllDecls(@import("core/tick_scheduler.zig"));
     std.testing.refAllDecls(@import("input/entity_selector.zig"));
     std.testing.refAllDecls(@import("input/tile_selector.zig"));
@@ -95,6 +96,7 @@ pub fn main() !void {
 
     // Initialize game renderer (coordinates all rendering)
     var game_renderer = GameRenderer.init(
+        allocator,
         &hex_renderer,
         &entity_renderer,
         &debug_overlay,
