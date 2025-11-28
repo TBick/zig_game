@@ -2,24 +2,31 @@ const std = @import("std");
 const rl = @import("raylib");
 const Camera = @import("../rendering/hex_renderer.zig").Camera;
 const EntitySelector = @import("entity_selector.zig").EntitySelector;
+const TileSelector = @import("tile_selector.zig").TileSelector;
 const EntityManager = @import("../entities/entity_manager.zig").EntityManager;
 const Entity = @import("../entities/entity.zig").Entity;
 const HexLayout = @import("../rendering/hex_renderer.zig").HexLayout;
 const DebugOverlay = @import("../ui/debug_overlay.zig").DebugOverlay;
+const HexGrid = @import("../world/hex_grid.zig").HexGrid;
+const HexCoord = @import("../world/hex_grid.zig").HexCoord;
 
 /// Central input handling system
 /// Coordinates camera controls, entity selection, and debug shortcuts
 pub const InputHandler = struct {
     camera: *Camera, // Reference to camera (owned by HexRenderer)
     entity_selector: EntitySelector, // Entity selection state
+    tile_selector: TileSelector, // Tile hover and selection state
     last_mouse_pos: rl.Vector2, // For mouse drag tracking
+    is_dragging: bool, // True when actively dragging camera
 
     /// Initialize input handler with camera reference
     pub fn init(camera: *Camera) InputHandler {
         return InputHandler{
             .camera = camera,
             .entity_selector = EntitySelector.init(),
+            .tile_selector = TileSelector.init(),
             .last_mouse_pos = rl.Vector2{ .x = 0, .y = 0 },
+            .is_dragging = false,
         };
     }
 
@@ -28,6 +35,7 @@ pub const InputHandler = struct {
         self: *InputHandler,
         frame_time: f32,
         entity_manager: *EntityManager,
+        grid: *HexGrid,
         layout: *const HexLayout,
         debug_overlay: *DebugOverlay,
         screen_width: i32,
@@ -36,7 +44,11 @@ pub const InputHandler = struct {
         // Update camera controls (mouse + keyboard)
         self.updateCamera(frame_time);
 
+        // Update tile hover/selection (runs before entity selection for proper priority)
+        self.updateTileSelection(grid, layout, screen_width, screen_height);
+
         // Update entity selection (delegate to EntitySelector)
+        // Entity selection takes priority - if entity clicked, clear tile selection
         self.updateSelection(entity_manager, layout, screen_width, screen_height);
 
         // Update debug controls (F3 toggle)
@@ -51,15 +63,44 @@ pub const InputHandler = struct {
         return self.entity_selector.getSelected(manager);
     }
 
+    /// Get currently hovered tile coordinate (null if none)
+    pub fn getHoveredTile(self: *const InputHandler) ?HexCoord {
+        return self.tile_selector.getHovered();
+    }
+
+    /// Get currently selected tile coordinate (null if none)
+    pub fn getSelectedTile(self: *const InputHandler) ?HexCoord {
+        return self.tile_selector.getSelected();
+    }
+
+    /// Check if a specific tile is currently hovered
+    pub fn isTileHovered(self: *const InputHandler, coord: HexCoord) bool {
+        return self.tile_selector.isHovered(coord);
+    }
+
+    /// Check if a specific tile is currently selected
+    pub fn isTileSelected(self: *const InputHandler, coord: HexCoord) bool {
+        return self.tile_selector.isSelected(coord);
+    }
+
     // Private methods
     fn updateCamera(self: *InputHandler, frame_time: f32) void {
         const mouse_pos = rl.getMousePosition();
 
-        // Mouse drag panning (right button)
-        if (rl.isMouseButtonDown(rl.MouseButton.right)) {
+        // Mouse drag panning with proper state management
+        if (rl.isMouseButtonPressed(rl.MouseButton.right)) {
+            // Start dragging
+            self.is_dragging = true;
+            self.last_mouse_pos = mouse_pos;
+        } else if (rl.isMouseButtonReleased(rl.MouseButton.right)) {
+            // Stop dragging
+            self.is_dragging = false;
+        } else if (self.is_dragging and rl.isMouseButtonDown(rl.MouseButton.right)) {
+            // Active drag - calculate delta and pan
             const dx = mouse_pos.x - self.last_mouse_pos.x;
             const dy = mouse_pos.y - self.last_mouse_pos.y;
             self.camera.pan(-dx, -dy);
+            self.last_mouse_pos = mouse_pos;
         }
 
         // Mouse wheel zoom
@@ -100,6 +141,30 @@ pub const InputHandler = struct {
         }
     }
 
+    fn updateTileSelection(
+        self: *InputHandler,
+        grid: *HexGrid,
+        layout: *const HexLayout,
+        screen_width: i32,
+        screen_height: i32,
+    ) void {
+        const mouse_pos = rl.getMousePosition();
+        const left_click = rl.isMouseButtonPressed(rl.MouseButton.left);
+
+        // Only process tile selection if not dragging camera
+        if (!self.is_dragging) {
+            self.tile_selector.update(
+                mouse_pos,
+                left_click,
+                grid,
+                self.camera,
+                layout,
+                screen_width,
+                screen_height,
+            );
+        }
+    }
+
     fn updateSelection(
         self: *InputHandler,
         entity_manager: *EntityManager,
@@ -109,6 +174,9 @@ pub const InputHandler = struct {
     ) void {
         const mouse_pos = rl.getMousePosition();
         const left_click = rl.isMouseButtonPressed(rl.MouseButton.left);
+
+        // Store previous selection state to detect changes
+        const had_entity_selection = self.entity_selector.hasSelection();
 
         // Delegate to EntitySelector
         self.entity_selector.update(
@@ -120,6 +188,11 @@ pub const InputHandler = struct {
             screen_width,
             screen_height,
         );
+
+        // If an entity was just selected, clear tile selection (entity priority)
+        if (!had_entity_selection and self.entity_selector.hasSelection()) {
+            self.tile_selector.clearSelection();
+        }
     }
 
     fn updateDebug(self: *InputHandler, debug_overlay: *DebugOverlay) void {
@@ -164,13 +237,17 @@ test "InputHandler.update compiles without errors" {
     var manager = try EntityManager.init(allocator);
     defer manager.deinit();
 
+    var grid = HexGrid.init(allocator);
+    defer grid.deinit();
+    try grid.createRect(5, 5);
+
     var camera = Camera.init();
     var handler = InputHandler.init(&camera);
     var debug_overlay = DebugOverlay.init();
     const layout = HexLayout.init(30.0, true);
 
     // Verify update() can be called
-    handler.update(0.016, &manager, &layout, &debug_overlay, 800, 600);
+    handler.update(0.016, &manager, &grid, &layout, &debug_overlay, 800, 600);
 
     try std.testing.expect(true);
 }
@@ -202,6 +279,49 @@ test "InputHandler.updateCamera modifies camera via pointer" {
 
     try std.testing.expectEqual(@as(f32, 150.0), camera.x);
     try std.testing.expectEqual(@as(f32, 250.0), camera.y);
+}
+
+test "InputHandler.is_dragging state initializes to false" {
+    var camera = Camera.init();
+    const handler = InputHandler.init(&camera);
+
+    try std.testing.expect(!handler.is_dragging);
+}
+
+// ============================================================================
+// Tile Selection Tests
+// ============================================================================
+
+test "InputHandler.tile_selector initializes empty" {
+    var camera = Camera.init();
+    const handler = InputHandler.init(&camera);
+
+    try std.testing.expect(!handler.tile_selector.hasHover());
+    try std.testing.expect(!handler.tile_selector.hasSelection());
+    try std.testing.expect(handler.getHoveredTile() == null);
+    try std.testing.expect(handler.getSelectedTile() == null);
+}
+
+test "InputHandler.isTileHovered delegates correctly" {
+    var camera = Camera.init();
+    var handler = InputHandler.init(&camera);
+
+    const coord = HexCoord{ .q = 3, .r = 4 };
+    handler.tile_selector.hovered_tile = coord;
+
+    try std.testing.expect(handler.isTileHovered(coord));
+    try std.testing.expect(!handler.isTileHovered(HexCoord{ .q = 0, .r = 0 }));
+}
+
+test "InputHandler.isTileSelected delegates correctly" {
+    var camera = Camera.init();
+    var handler = InputHandler.init(&camera);
+
+    const coord = HexCoord{ .q = 5, .r = 2 };
+    handler.tile_selector.selected_tile = coord;
+
+    try std.testing.expect(handler.isTileSelected(coord));
+    try std.testing.expect(!handler.isTileSelected(HexCoord{ .q = 1, .r = 1 }));
 }
 
 // ============================================================================

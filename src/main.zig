@@ -28,6 +28,7 @@ test {
     std.testing.refAllDecls(@import("rendering/entity_renderer.zig"));
     std.testing.refAllDecls(@import("core/tick_scheduler.zig"));
     std.testing.refAllDecls(@import("input/entity_selector.zig"));
+    std.testing.refAllDecls(@import("input/tile_selector.zig"));
     std.testing.refAllDecls(@import("input/input_handler.zig"));
     std.testing.refAllDecls(@import("ui/entity_info_panel.zig"));
 }
@@ -110,10 +111,11 @@ pub fn main() !void {
         const current_width = rl.getScreenWidth();
         const current_height = rl.getScreenHeight();
 
-        // Centralized input handling (camera, selection, debug)
+        // Centralized input handling (camera, tile selection, entity selection, debug)
         input_handler.update(
             @floatCast(frame_time),
             &entity_manager,
+            &grid,
             &hex_renderer.layout,
             &debug_overlay,
             current_width,
