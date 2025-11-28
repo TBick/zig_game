@@ -16,17 +16,17 @@ const EntityRole = @import("../entities/entity.zig").EntityRole;
 /// Store HexGrid pointer in Lua registry for C functions to access
 pub fn setGridContext(L: *lua.lua_State, grid: *HexGrid) void {
     lua.pushLightuserdata(L, grid);
-    lua.setField(L, lua.REGISTRYINDEX, "zig_grid_ptr");
+    lua.setField(L, lua.LUA_REGISTRYINDEX, "zig_grid_ptr");
 }
 
 /// Retrieve HexGrid pointer from Lua registry
 pub fn getGridContext(L: *lua.lua_State) ?*HexGrid {
-    _ = lua.getField(L, lua.REGISTRYINDEX, "zig_grid_ptr");
+    _ = lua.getField(L, lua.LUA_REGISTRYINDEX, "zig_grid_ptr");
     if (!lua.isLightuserdata(L, -1)) {
         lua.pop(L, 1);
         return null;
     }
-    const ptr = lua.touserdata(L, -1);
+    const ptr = lua.toUserdata(L, -1);
     lua.pop(L, 1);
 
     if (ptr == null) return null;
@@ -36,17 +36,17 @@ pub fn getGridContext(L: *lua.lua_State) ?*HexGrid {
 /// Store EntityManager pointer in Lua registry for C functions to access
 pub fn setEntityManagerContext(L: *lua.lua_State, manager: *EntityManager) void {
     lua.pushLightuserdata(L, manager);
-    lua.setField(L, lua.REGISTRYINDEX, "zig_entity_manager_ptr");
+    lua.setField(L, lua.LUA_REGISTRYINDEX, "zig_entity_manager_ptr");
 }
 
 /// Retrieve EntityManager pointer from Lua registry
 pub fn getEntityManagerContext(L: *lua.lua_State) ?*EntityManager {
-    _ = lua.getField(L, lua.REGISTRYINDEX, "zig_entity_manager_ptr");
+    _ = lua.getField(L, lua.LUA_REGISTRYINDEX, "zig_entity_manager_ptr");
     if (!lua.isLightuserdata(L, -1)) {
         lua.pop(L, 1);
         return null;
     }
-    const ptr = lua.touserdata(L, -1);
+    const ptr = lua.toUserdata(L, -1);
     lua.pop(L, 1);
 
     if (ptr == null) return null;
@@ -60,14 +60,14 @@ pub fn getEntityManagerContext(L: *lua.lua_State) ?*EntityManager {
 /// Read a position table from the Lua stack at the given index
 /// Expected format: {q = number, r = number}
 /// Returns null if the table is invalid
-fn readPositionTable(L: *lua.lua_State, index: i32) ?HexCoord {
+fn readPositionTable(L: ?*lua.lua_State, index: i32) ?HexCoord {
     if (!lua.isTable(L, index)) {
         return null;
     }
 
     // Get q field
     _ = lua.getField(L, index, "q");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
         return null;
     }
@@ -76,7 +76,7 @@ fn readPositionTable(L: *lua.lua_State, index: i32) ?HexCoord {
 
     // Get r field
     _ = lua.getField(L, index, "r");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
         return null;
     }
@@ -87,7 +87,7 @@ fn readPositionTable(L: *lua.lua_State, index: i32) ?HexCoord {
 }
 
 /// Push a position as a Lua table {q = ..., r = ...}
-fn pushPositionTable(L: *lua.lua_State, pos: HexCoord) void {
+fn pushPositionTable(L: ?*lua.lua_State, pos: HexCoord) void {
     lua.createTable(L, 0, 2);
 
     lua.pushNumber(L, @floatFromInt(pos.q));
@@ -104,7 +104,7 @@ fn pushPositionTable(L: *lua.lua_State, pos: HexCoord) void {
 /// world.getTileAt(q, r) -> table or nil
 /// Get tile information at the given hex coordinate
 /// Returns: {coord = {q, r}} or nil if no tile exists
-export fn lua_world_getTileAt(L: *lua.lua_State) c_int {
+export fn lua_world_getTileAt(L: ?*lua.lua_State) c_int {
     // Check arguments
     if (lua.getTop(L) < 1) {
         return 0; // Return nil (no tile)
@@ -119,7 +119,7 @@ export fn lua_world_getTileAt(L: *lua.lua_State) c_int {
         } else {
             return 0; // Invalid table format
         }
-    } else if (lua.isNumber(L, 1) and lua.isNumber(L, 2)) {
+    } else if (lua.isNumber(L, 1) != 0 and lua.isNumber(L, 2) != 0) {
         // Position passed as two separate numbers (q, r)
         const q: i32 = @intFromFloat(lua.toNumber(L, 1));
         const r: i32 = @intFromFloat(lua.toNumber(L, 2));
@@ -129,7 +129,7 @@ export fn lua_world_getTileAt(L: *lua.lua_State) c_int {
     }
 
     // Get grid context
-    const grid = getGridContext(L) orelse return 0;
+    const grid = getGridContext(L.?) orelse return 0;
 
     // Query tile
     if (grid.getTile(coord)) |tile| {
@@ -147,7 +147,7 @@ export fn lua_world_getTileAt(L: *lua.lua_State) c_int {
 /// Calculate hex distance between two positions
 /// Args: pos1 = {q, r}, pos2 = {q, r}
 /// Returns: distance as number, or nil on error
-export fn lua_world_distance(L: *lua.lua_State) c_int {
+export fn lua_world_distance(L: ?*lua.lua_State) c_int {
     if (lua.getTop(L) < 2) {
         return 0; // Not enough arguments
     }
@@ -166,7 +166,7 @@ export fn lua_world_distance(L: *lua.lua_State) c_int {
 /// Get all 6 neighboring hex coordinates
 /// Args: position = {q, r}
 /// Returns: array of tables {{q, r}, {q, r}, ...} with 6 entries
-export fn lua_world_neighbors(L: *lua.lua_State) c_int {
+export fn lua_world_neighbors(L: ?*lua.lua_State) c_int {
     if (lua.getTop(L) < 1) {
         return 0;
     }
@@ -192,7 +192,7 @@ export fn lua_world_neighbors(L: *lua.lua_State) c_int {
 /// Find all entities at a specific position
 /// Args: position = {q, r}
 /// Returns: array of entity IDs (numbers)
-export fn lua_world_findEntitiesAt(L: *lua.lua_State) c_int {
+export fn lua_world_findEntitiesAt(L: ?*lua.lua_State) c_int {
     if (lua.getTop(L) < 1) {
         return 0;
     }
@@ -201,7 +201,7 @@ export fn lua_world_findEntitiesAt(L: *lua.lua_State) c_int {
     const pos = readPositionTable(L, 1) orelse return 0;
 
     // Get entity manager context
-    const manager = getEntityManagerContext(L) orelse return 0;
+    const manager = getEntityManagerContext(L.?) orelse return 0;
 
     // Query entities at position (use stack buffer for up to 100 entities)
     var buffer: [100]u32 = undefined;
@@ -225,7 +225,7 @@ export fn lua_world_findEntitiesAt(L: *lua.lua_State) c_int {
 ///   - range = number (hex distance)
 ///   - role = string (optional: "worker", "combat", "scout", "engineer")
 /// Returns: array of entity IDs
-export fn lua_world_findNearbyEntities(L: *lua.lua_State) c_int {
+export fn lua_world_findNearbyEntities(L: ?*lua.lua_State) c_int {
     if (lua.getTop(L) < 2) {
         return 0; // Need at least position and range
     }
@@ -234,15 +234,17 @@ export fn lua_world_findNearbyEntities(L: *lua.lua_State) c_int {
     const pos = readPositionTable(L, 1) orelse return 0;
 
     // Read range
-    if (!lua.isNumber(L, 2)) {
+    if (lua.isNumber(L, 2) == 0) {
         return 0;
     }
     const range: u32 = @intFromFloat(lua.toNumber(L, 2));
 
     // Read optional role filter
     var role_filter: ?EntityRole = null;
-    if (lua.getTop(L) >= 3 and lua.isString(L, 3)) {
-        const role_str = lua.toString(L, 3);
+    if (lua.getTop(L) >= 3 and lua.isString(L, 3) != 0) {
+        var len: usize = 0;
+        const role_str_ptr = lua.toString(L, 3, &len);
+        const role_str = role_str_ptr[0..len];
         if (std.mem.eql(u8, role_str, "worker")) {
             role_filter = .worker;
         } else if (std.mem.eql(u8, role_str, "combat")) {
@@ -255,7 +257,7 @@ export fn lua_world_findNearbyEntities(L: *lua.lua_State) c_int {
     }
 
     // Get entity manager context
-    const manager = getEntityManagerContext(L) orelse return 0;
+    const manager = getEntityManagerContext(L.?) orelse return 0;
 
     // Find all alive entities and filter by distance and role
     const all_entities = manager.getAliveEntities();
@@ -338,8 +340,8 @@ test "world_api: context set/get for grid" {
     defer grid.deinit();
 
     // Set and get grid context
-    setGridContext(vm.L, &grid);
-    const retrieved = getGridContext(vm.L);
+    setGridContext(vm.L.?, &grid);
+    const retrieved = getGridContext(vm.L.?);
     try testing.expect(retrieved != null);
     try testing.expectEqual(&grid, retrieved.?);
 }
@@ -352,8 +354,8 @@ test "world_api: context set/get for entity manager" {
     defer manager.deinit();
 
     // Set and get manager context
-    setEntityManagerContext(vm.L, &manager);
-    const retrieved = getEntityManagerContext(vm.L);
+    setEntityManagerContext(vm.L.?, &manager);
+    const retrieved = getEntityManagerContext(vm.L.?);
     try testing.expect(retrieved != null);
     try testing.expectEqual(&manager, retrieved.?);
 }
@@ -370,8 +372,8 @@ test "world_api: getTileAt with existing tile" {
     try grid.setTile(coord);
 
     // Set context and register API
-    setGridContext(vm.L, &grid);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    registerWorldAPI(vm.L.?);
 
     // Test getTileAt
     try vm.doString(
@@ -389,8 +391,8 @@ test "world_api: getTileAt with non-existent tile" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    setGridContext(vm.L, &grid);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    registerWorldAPI(vm.L.?);
 
     // Test getTileAt on empty grid
     try vm.doString(
@@ -409,8 +411,8 @@ test "world_api: getTileAt with table argument" {
     const coord = HexCoord.init(7, -2);
     try grid.setTile(coord);
 
-    setGridContext(vm.L, &grid);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    registerWorldAPI(vm.L.?);
 
     // Test getTileAt with table argument
     try vm.doString(
@@ -428,8 +430,8 @@ test "world_api: distance calculation" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    setGridContext(vm.L, &grid);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    registerWorldAPI(vm.L.?);
 
     // Test distance calculation
     try vm.doString(
@@ -448,8 +450,8 @@ test "world_api: neighbors returns 6 positions" {
     var grid = HexGrid.init(testing.allocator);
     defer grid.deinit();
 
-    setGridContext(vm.L, &grid);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    registerWorldAPI(vm.L.?);
 
     // Test neighbors
     try vm.doString(
@@ -483,9 +485,9 @@ test "world_api: findEntitiesAt with entities" {
     const id1 = try manager.spawn(pos, .worker);
     const id2 = try manager.spawn(pos, .combat);
 
-    setGridContext(vm.L, &grid);
-    setEntityManagerContext(vm.L, &manager);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    setEntityManagerContext(vm.L.?, &manager);
+    registerWorldAPI(vm.L.?);
 
     // Test findEntitiesAt
     const script = std.fmt.allocPrint(testing.allocator,
@@ -509,9 +511,9 @@ test "world_api: findEntitiesAt with no entities" {
     var manager = try EntityManager.init(testing.allocator);
     defer manager.deinit();
 
-    setGridContext(vm.L, &grid);
-    setEntityManagerContext(vm.L, &manager);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    setEntityManagerContext(vm.L.?, &manager);
+    registerWorldAPI(vm.L.?);
 
     // Test findEntitiesAt on empty position
     try vm.doString(
@@ -536,9 +538,9 @@ test "world_api: findNearbyEntities without role filter" {
     _ = try manager.spawn(HexCoord.init(2, 0), .scout);   // distance 2
     _ = try manager.spawn(HexCoord.init(5, 0), .engineer); // distance 5
 
-    setGridContext(vm.L, &grid);
-    setEntityManagerContext(vm.L, &manager);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    setEntityManagerContext(vm.L.?, &manager);
+    registerWorldAPI(vm.L.?);
 
     // Test findNearbyEntities with range 2 (should find 3 entities)
     try vm.doString(
@@ -563,9 +565,9 @@ test "world_api: findNearbyEntities with role filter" {
     _ = try manager.spawn(HexCoord.init(0, 1), .combat);
     _ = try manager.spawn(HexCoord.init(1, 1), .scout);
 
-    setGridContext(vm.L, &grid);
-    setEntityManagerContext(vm.L, &manager);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    setEntityManagerContext(vm.L.?, &manager);
+    registerWorldAPI(vm.L.?);
 
     // Test findNearbyEntities with role filter (workers only)
     try vm.doString(
@@ -593,9 +595,9 @@ test "world_api: complete workflow with multiple queries" {
     _ = try manager.spawn(HexCoord.init(5, 5), .worker);
     _ = try manager.spawn(HexCoord.init(6, 5), .combat);
 
-    setGridContext(vm.L, &grid);
-    setEntityManagerContext(vm.L, &manager);
-    registerWorldAPI(vm.L);
+    setGridContext(vm.L.?, &grid);
+    setEntityManagerContext(vm.L.?, &manager);
+    registerWorldAPI(vm.L.?);
 
     // Test complete workflow
     try vm.doString(

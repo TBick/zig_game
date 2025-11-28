@@ -36,7 +36,7 @@ pub fn getEntityContext(L: ?*lua.lua_State) ?*Entity {
     }
 
     const ptr = lua.toUserdata(L, -1);
-    return @ptrCast(ptr);
+    return @ptrCast(@alignCast(ptr));
 }
 
 /// Create and populate the 'self' table with entity properties
@@ -58,7 +58,7 @@ pub fn createSelfTable(L: ?*lua.lua_State, entity: *const Entity) void {
 
     // self.role
     const role_str = getRoleString(entity.role);
-    lua.pushLString(L, role_str.ptr, role_str.len);
+    _ = lua.pushLString(L, role_str.ptr, role_str.len);
     lua.setField(L, -2, "role");
 
     // self.energy
@@ -101,7 +101,7 @@ pub fn getActionQueueContext(L: ?*lua.lua_State) ?*ActionQueue {
     }
 
     const ptr = lua.toUserdata(L, -1);
-    return @ptrCast(ptr);
+    return @ptrCast(@alignCast(ptr));
 }
 
 // ============================================================================
@@ -110,7 +110,7 @@ pub fn getActionQueueContext(L: ?*lua.lua_State) ?*ActionQueue {
 
 /// entity.getId() -> number
 /// Returns the entity's unique ID
-pub fn lua_entity_getId(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_getId(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushNil(L);
         return 1;
@@ -122,7 +122,7 @@ pub fn lua_entity_getId(L: ?*lua.lua_State) callconv(.C) c_int {
 
 /// entity.getPosition() -> {q: number, r: number}
 /// Returns the entity's hex coordinate position
-pub fn lua_entity_getPosition(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_getPosition(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushNil(L);
         return 1;
@@ -142,7 +142,7 @@ pub fn lua_entity_getPosition(L: ?*lua.lua_State) callconv(.C) c_int {
 
 /// entity.getEnergy() -> number
 /// Returns the entity's current energy level
-pub fn lua_entity_getEnergy(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_getEnergy(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushNumber(L, 0.0);
         return 1;
@@ -154,7 +154,7 @@ pub fn lua_entity_getEnergy(L: ?*lua.lua_State) callconv(.C) c_int {
 
 /// entity.getMaxEnergy() -> number
 /// Returns the entity's maximum energy capacity
-pub fn lua_entity_getMaxEnergy(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_getMaxEnergy(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushNumber(L, 0.0);
         return 1;
@@ -166,20 +166,20 @@ pub fn lua_entity_getMaxEnergy(L: ?*lua.lua_State) callconv(.C) c_int {
 
 /// entity.getRole() -> string
 /// Returns the entity's role as a string ("worker", "combat", "scout", "engineer")
-pub fn lua_entity_getRole(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_getRole(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushNil(L);
         return 1;
     };
 
     const role_str = getRoleString(entity.role);
-    lua.pushLString(L, role_str.ptr, role_str.len);
+    _ = lua.pushLString(L, role_str.ptr, role_str.len);
     return 1; // Return 1 value
 }
 
 /// entity.isAlive() -> boolean
 /// Returns true if the entity is alive
-pub fn lua_entity_isAlive(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_isAlive(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushBoolean(L, false);
         return 1;
@@ -191,7 +191,7 @@ pub fn lua_entity_isAlive(L: ?*lua.lua_State) callconv(.C) c_int {
 
 /// entity.isActive() -> boolean
 /// Returns true if the entity is alive and has energy
-pub fn lua_entity_isActive(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_isActive(L: ?*lua.lua_State) callconv(.c) c_int {
     const entity = getEntityContext(L) orelse {
         lua.pushBoolean(L, false);
         return 1;
@@ -209,23 +209,23 @@ pub fn lua_entity_isActive(L: ?*lua.lua_State) callconv(.C) c_int {
 /// Queue a move action to the target position
 /// Args: position table with {q, r}
 /// Returns: true if action queued successfully, false otherwise
-pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.c) c_int {
     const queue = getActionQueueContext(L) orelse {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     };
 
     // Expect a table as first argument {q = ..., r = ...}
     if (!lua.isTable(L, 1)) {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
 
     // Get q value
     _ = lua.getField(L, 1, "q");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
     const q: i32 = @intCast(lua.toInteger(L, -1));
@@ -233,9 +233,9 @@ pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.C) c_int {
 
     // Get r value
     _ = lua.getField(L, 1, "r");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
     const r: i32 = @intCast(lua.toInteger(L, -1));
@@ -247,11 +247,11 @@ pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.C) c_int {
     };
 
     queue.add(action) catch {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     };
 
-    lua.pushBoolean(L, true);
+    lua.pushNumber(L, 1.0);
     return 1;
 }
 
@@ -259,23 +259,23 @@ pub fn lua_entity_moveTo(L: ?*lua.lua_State) callconv(.C) c_int {
 /// Queue a harvest action at the target position (Phase 3 - stub for now)
 /// Args: position table with {q, r}
 /// Returns: true if action queued successfully, false otherwise
-pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.c) c_int {
     const queue = getActionQueueContext(L) orelse {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     };
 
     // Expect a table as first argument {q = ..., r = ...}
     if (!lua.isTable(L, 1)) {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
 
     // Get q value
     _ = lua.getField(L, 1, "q");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
     const q: i32 = @intCast(lua.toInteger(L, -1));
@@ -283,9 +283,9 @@ pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.C) c_int {
 
     // Get r value
     _ = lua.getField(L, 1, "r");
-    if (!lua.isNumber(L, -1)) {
+    if (lua.isNumber(L, -1) == 0) {
         lua.pop(L, 1);
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     }
     const r: i32 = @intCast(lua.toInteger(L, -1));
@@ -297,11 +297,11 @@ pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.C) c_int {
     };
 
     queue.add(action) catch {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     };
 
-    lua.pushBoolean(L, true);
+    lua.pushNumber(L, 1.0);
     return 1;
 }
 
@@ -309,15 +309,16 @@ pub fn lua_entity_harvest(L: ?*lua.lua_State) callconv(.C) c_int {
 /// Queue a consume action for resources (Phase 3 - stub for now)
 /// Args: resource_type (string), amount (number)
 /// Returns: true if action queued successfully, false otherwise
-pub fn lua_entity_consume(L: ?*lua.lua_State) callconv(.C) c_int {
+pub fn lua_entity_consume(L: ?*lua.lua_State) callconv(.c) c_int {
     const queue = getActionQueueContext(L) orelse {
-        lua.pushBoolean(L, false);
+        lua.pushNumber(L, 0.0);
         return 1;
     };
+    _ = queue;
 
     // Expect string as first argument (resource type)
-    if (!lua.isString(L, 1)) {
-        lua.pushBoolean(L, false);
+    if (lua.isString(L, 1) == 0) {
+        lua.pushNumber(L, 0.0);
         return 1;
     }
 
@@ -326,8 +327,8 @@ pub fn lua_entity_consume(L: ?*lua.lua_State) callconv(.C) c_int {
     const resource_type = resource_ptr[0..len];
 
     // Expect number as second argument (amount)
-    if (!lua.isNumber(L, 2)) {
-        lua.pushBoolean(L, false);
+    if (lua.isNumber(L, 2) == 0) {
+        lua.pushNumber(L, 0.0);
         return 1;
     }
     const amount: u32 = @intCast(lua.toInteger(L, 2));
@@ -340,7 +341,7 @@ pub fn lua_entity_consume(L: ?*lua.lua_State) callconv(.C) c_int {
     _ = resource_type;
     _ = amount;
 
-    lua.pushBoolean(L, false);
+    lua.pushNumber(L, 0.0);
     return 1;
 }
 

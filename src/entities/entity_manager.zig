@@ -240,6 +240,7 @@ pub const EntityManager = struct {
 
     /// Process queued actions for an entity
     fn processEntityActions(self: *EntityManager, entity: *Entity, actions: []const EntityAction) void {
+        _ = self;
         for (actions) |action| {
             switch (action) {
                 .move => |move_data| {
@@ -248,12 +249,12 @@ pub const EntityManager = struct {
                     // Moving costs energy
                     _ = entity.consumeEnergy(5.0);
                 },
-                .harvest => |_harvest_data| {
+                .harvest => {
                     // Phase 3: Implement resource harvesting
                     // For now, just consume energy
                     _ = entity.consumeEnergy(10.0);
                 },
-                .consume => |_consume_data| {
+                .consume => {
                     // Phase 3: Implement resource consumption
                     // For now, do nothing (resource system doesn't exist yet)
                 },
@@ -518,7 +519,7 @@ test "EntityManager.processTick handles script errors gracefully" {
 
     const id2 = try manager.spawn(HexCoord{ .q = 1, .r = 0 }, .combat);
     const entity2 = manager.getEntity(id2).?;
-    entity2.setScript("success = true");
+    entity2.setScript("success = 1.0");
 
     // Process tick - should continue despite error in entity1's script
     try manager.processTick(&grid);
