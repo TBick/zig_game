@@ -4,11 +4,65 @@ const HexCoord = @import("../world/hex_grid.zig").HexCoord;
 const HexGrid = @import("../world/hex_grid.zig").HexGrid;
 const DrawableTileSet = @import("drawable_tile_set.zig").DrawableTileSet;
 
+/// Hexagon direction/edge enum for flat-top hexagons
+/// Directions represent both neighbor positions and edge indices
+pub const HexDirection_Flat = enum(u3) {
+    northeast = 0, // E:  q+1, r+0  (also: edge connecting corners 0→1)
+    north = 1, // NE: q+1, r-1  (also: edge connecting corners 1→2)
+    northwest = 2, // NW: q+0, r-1  (also: edge connecting corners 2→3)
+    southwest = 3, // W:  q-1, r+0  (also: edge connecting corners 3→4)
+    south = 4, // SW: q-1, r+1  (also: edge connecting corners 4→5)
+    southeast = 5, // SE: q+0, r+1  (also: edge connecting corners 5→0)
+
+    /// Convert to integer index
+    pub fn toInt(self: HexDirection_Flat) u3 {
+        return @intFromEnum(self);
+    }
+
+    /// Create from integer index
+    pub fn fromInt(value: u3) HexDirection_Flat {
+        return @enumFromInt(value);
+    }
+
+    /// Get all 6 directions in order
+    pub fn all() [6]HexDirection_Flat {
+        return [6]HexDirection_Flat{
+            .northeast, .north, .northwest,
+            .southwest, .south, .southeast,
+        };
+    }
+};
+
+// Hexagon direction/edge enum for pointy-top hexagons
+pub const HexDirection_Pointy = enum(u3) {
+    east = 0,
+    northeast = 1,
+    northwest = 2,
+    west = 3,
+    southwest = 4,
+    southeast = 5,
+
+    pub fn toInt(self: HexDirection_Pointy) u3 {
+        return @intFromEnum(self);
+    }
+
+    pub fn fromInt(value: u3) HexDirection_Pointy {
+        return @enumFromInt(value);
+    }
+
+    pub fn all() [6]HexDirection_Pointy {
+        return [6]HexDirection_Pointy{
+            .east, .northeast, .northwest,
+            .west, .southwest, .southeast,
+        };
+    }
+};
+
 /// Camera for viewing the hex grid
 pub const Camera = struct {
-    x: f32,     // World position X
-    y: f32,     // World position Y
-    zoom: f32,  // Zoom level (1.0 = normal)
+    x: f32, // World position X
+    y: f32, // World position Y
+    zoom: f32, // Zoom level (1.0 = normal)
 
     pub fn init() Camera {
         return Camera{
@@ -57,8 +111,8 @@ pub const Camera = struct {
 
 /// Hex rendering configuration
 pub const HexLayout = struct {
-    size: f32,          // Radius of hexagon
-    orientation: bool,  // true = flat-top, false = pointy-top
+    size: f32, // Radius of hexagon
+    orientation: bool, // true = flat-top, false = pointy-top
 
     pub fn init(size: f32, flat_top: bool) HexLayout {
         return HexLayout{
@@ -108,7 +162,7 @@ pub const HexLayout = struct {
         for (0..6) |i| {
             const offset: f32 = if (self.orientation) 0.0 else 30.0;
             const angle_deg: f32 = 60.0 * @as(f32, @floatFromInt(i)) + offset;
-            const angle_rad = angle_deg * std.math.pi / 180.0;
+            const angle_rad = -angle_deg * std.math.pi / 180.0;
 
             corners[i] = rl.Vector2{
                 .x = center.x + self.size * @cos(angle_rad),
@@ -184,73 +238,26 @@ pub const HexRenderer = struct {
     // ========================================================================
 
     /// Get the two vertex positions for a specific edge direction
-    /// Direction: 0=E, 1=NE, 2=NW, 3=W, 4=SW, 5=SE
     /// Returns vertices in world coordinates
-    fn getEdgeVertices(self: *HexRenderer, coord: HexCoord, direction: u3) struct { v1: rl.Vector2, v2: rl.Vector2 } {
-        const corners = self.layout.hexCorners(coord);
-        const next_dir = (direction + 1) % 6;
+    fn getEdgeVertices(self: *HexRenderer, coord: HexCoord, direction_idx: u3) struct { v1: rl.Vector2, v2: rl.Vector2 } {
+        const corners: [6]rl.Vector2 = self.layout.hexCorners(coord);
+        const next_dir = (direction_idx + 1) % 6;
         return .{
-            .v1 = corners[direction],
+            .v1 = corners[direction_idx],
             .v2 = corners[next_dir],
         };
-    }
-
-    /// Get the edge color for a tile considering neighbor states and priority
-    /// Priority: Selected > Hovered > Normal
-    fn getTileEdgeColor(
-        self: *const HexRenderer,
-        coord: HexCoord,
-        direction: u3,
-        drawable_set: *const DrawableTileSet,
-        selected_tile: ?HexCoord,
-        hovered_tile: ?HexCoord,
-    ) rl.Color {
-        _ = self;
-
-        // Check if this tile is selected or hovered
-        const is_selected = if (selected_tile) |sel| sel.q == coord.q and sel.r == coord.r else false;
-        const is_hovered = if (hovered_tile) |hov| hov.q == coord.q and hov.r == coord.r else false;
-
-        // Get neighbor in this direction
-        const neighbor = coord.neighbor(direction);
-        const neighbor_in_set = drawable_set.contains(neighbor);
-
-        // If neighbor is in drawable set, check its state
-        if (neighbor_in_set) {
-            const neighbor_selected = if (selected_tile) |sel| sel.q == neighbor.q and sel.r == neighbor.r else false;
-            const neighbor_hovered = if (hovered_tile) |hov| hov.q == neighbor.q and hov.r == neighbor.r else false;
-
-            // Priority system: Selected > Hovered > Normal
-            // Use the higher priority color between this tile and neighbor
-            if (is_selected or neighbor_selected) {
-                return rl.Color.init(120, 180, 255, 255); // Selected: bright blue outline
-            }
-            if (is_hovered or neighbor_hovered) {
-                return rl.Color.init(150, 150, 170, 255); // Hovered: bright gray outline
-            }
-            return rl.Color.light_gray; // Normal: light gray outline
-        } else {
-            // Neighbor not in drawable set, use this tile's color only
-            if (is_selected) {
-                return rl.Color.init(120, 180, 255, 255); // Selected: bright blue outline
-            }
-            if (is_hovered) {
-                return rl.Color.init(150, 150, 170, 255); // Hovered: bright gray outline
-            }
-            return rl.Color.light_gray; // Normal: light gray outline
-        }
     }
 
     /// Draw a single edge segment from this tile in the specified direction
     fn drawEdgeSegment(
         self: *HexRenderer,
         coord: HexCoord,
-        direction: u3,
         color: rl.Color,
+        direction_idx: u3,
         screen_width: i32,
         screen_height: i32,
     ) void {
-        const vertices = self.getEdgeVertices(coord, direction);
+        const vertices = self.getEdgeVertices(coord, direction_idx);
 
         // Convert to screen space
         const screen_v1 = self.camera.worldToScreen(vertices.v1.x, vertices.v1.y, screen_width, screen_height);
@@ -260,60 +267,43 @@ pub const HexRenderer = struct {
         rl.drawLineV(screen_v1, screen_v2, color);
     }
 
-    /// Draw optimized edges for a set of drawable tiles
-    /// Uses Edge Ownership Rule: each tile only draws edges in directions 0, 1, 2 (E, NE, NW)
-    /// PLUS boundary edges (edges with no neighbor)
-    /// This eliminates duplicate edge drawing while ensuring boundary edges are rendered
+    /// Draw optimized edges for a set of drawable tiles (grid rendering only, no highlights)
+    /// Uses Edge Ownership Rule: each tile draws owned edges (E, NE, NW) PLUS boundary edges
+    /// This achieves 50% reduction in draw calls (O(6N) → O(3N))
     pub fn drawOptimizedEdges(
         self: *HexRenderer,
         drawable_set: *const DrawableTileSet,
-        selected_tile: ?HexCoord,
-        hovered_tile: ?HexCoord,
         screen_width: i32,
         screen_height: i32,
     ) void {
-        const debug = false; // Set to true to enable debug prints
+        //const debug = true; // Set to true to enable debug prints
+        const edgeColor = rl.Color{
+            .r = 255,
+            .g = 255,
+            .b = 255,
+            .a = 255,
+        };
 
         var it = drawable_set.iterator();
         while (it.next()) |coord_ptr| {
             const coord = coord_ptr.*;
 
-            if (debug) {
-                std.debug.print("\n=== Tile ({d},{d}) ===\n", .{ coord.q, coord.r });
-            }
+            // Debug tiles (1,0) and (1,1) to see edge sharing
+            const neighbors: [6]HexCoord = coord.neighbors(self.layout.orientation);
 
-            // Draw owned edges (0, 1, 2) for all tiles
-            // Draw non-owned edges (3, 4, 5) only for boundary tiles
-            for (0..6) |dir| {
-                const direction: u3 = @intCast(dir);
-
-                // Check if neighbor exists
-                const neighbor = coord.neighbor(direction);
-                const has_neighbor = drawable_set.contains(neighbor);
-
-                // Always draw owned edges (0, 1, 2)
-                // Only draw non-owned edges (3, 4, 5) if no neighbor
-                const should_draw = if (direction <= 2)
-                    true // Always draw owned edges
-                else
-                    !has_neighbor; // Only draw non-owned edges at boundaries
-
-                if (debug) {
-                    const dir_names = [_][]const u8{ "E", "NE", "NW", "W", "SW", "SE" };
-                    std.debug.print("  Dir {d} ({s}): neighbor=({d},{d}) has_neighbor={} should_draw={}\n", .{
-                        direction,
-                        dir_names[direction],
-                        neighbor.q,
-                        neighbor.r,
-                        has_neighbor,
-                        should_draw,
-                    });
+            var index: u3 = 0;
+            for (neighbors) |c| {
+                if (drawable_set.contains(c)) {
+                    // Not a boundary, need to determine ownership
+                    if (index <= 2) {
+                        // Owned edge (NE, N, NW), always draw
+                        drawEdgeSegment(self, coord, edgeColor, index, screen_width, screen_height);
+                    }
+                } else {
+                    // Boundary edge, draw it.
+                    drawEdgeSegment(self, coord, edgeColor, index, screen_width, screen_height);
                 }
-
-                if (should_draw) {
-                    const color = self.getTileEdgeColor(coord, direction, drawable_set, selected_tile, hovered_tile);
-                    self.drawEdgeSegment(coord, direction, color, screen_width, screen_height);
-                }
+                index += 1;
             }
         }
     }
@@ -635,12 +625,12 @@ test "HexLayout.pixelToHex with negative coordinates" {
 // Optimized Edge Rendering Tests
 // ============================================================================
 
-test "HexRenderer.getEdgeVertices returns correct vertices for direction 0" {
+test "HexRenderer.getEdgeVertices returns correct vertices for east direction" {
     var renderer = HexRenderer.init(30.0);
     const coord = HexCoord.init(0, 0);
 
-    // Direction 0 = E, should return corners[0] and corners[1]
-    const edge = renderer.getEdgeVertices(coord, 0);
+    // Direction east should return corners[0] and corners[1]
+    const edge = renderer.getEdgeVertices(coord, .east);
     const corners = renderer.layout.hexCorners(coord);
 
     try std.testing.expectEqual(corners[0].x, edge.v1.x);
@@ -649,90 +639,16 @@ test "HexRenderer.getEdgeVertices returns correct vertices for direction 0" {
     try std.testing.expectEqual(corners[1].y, edge.v2.y);
 }
 
-test "HexRenderer.getEdgeVertices wraps correctly at direction 5" {
+test "HexRenderer.getEdgeVertices wraps correctly at southeast direction" {
     var renderer = HexRenderer.init(30.0);
     const coord = HexCoord.init(1, 1);
 
-    // Direction 5 = SE, should return corners[5] and corners[0] (wrap around)
-    const edge = renderer.getEdgeVertices(coord, 5);
+    // Direction southeast should return corners[5] and corners[0] (wrap around)
+    const edge = renderer.getEdgeVertices(coord, .southeast);
     const corners = renderer.layout.hexCorners(coord);
 
     try std.testing.expectEqual(corners[5].x, edge.v1.x);
     try std.testing.expectEqual(corners[5].y, edge.v1.y);
     try std.testing.expectEqual(corners[0].x, edge.v2.x);
     try std.testing.expectEqual(corners[0].y, edge.v2.y);
-}
-
-test "HexRenderer.getTileEdgeColor returns selected color when tile is selected" {
-    const renderer = HexRenderer.init(30.0);
-    var drawable_set = DrawableTileSet.init(std.testing.allocator);
-    defer drawable_set.deinit();
-
-    const coord = HexCoord.init(0, 0);
-    try drawable_set.add(coord);
-
-    const selected_tile = HexCoord.init(0, 0);
-    const color = renderer.getTileEdgeColor(coord, 0, &drawable_set, selected_tile, null);
-
-    // Selected color: bright blue
-    try std.testing.expectEqual(@as(u8, 120), color.r);
-    try std.testing.expectEqual(@as(u8, 180), color.g);
-    try std.testing.expectEqual(@as(u8, 255), color.b);
-}
-
-test "HexRenderer.getTileEdgeColor returns hovered color when tile is hovered" {
-    const renderer = HexRenderer.init(30.0);
-    var drawable_set = DrawableTileSet.init(std.testing.allocator);
-    defer drawable_set.deinit();
-
-    const coord = HexCoord.init(1, 1);
-    try drawable_set.add(coord);
-
-    const hovered_tile = HexCoord.init(1, 1);
-    const color = renderer.getTileEdgeColor(coord, 0, &drawable_set, null, hovered_tile);
-
-    // Hovered color: bright gray
-    try std.testing.expectEqual(@as(u8, 150), color.r);
-    try std.testing.expectEqual(@as(u8, 150), color.g);
-    try std.testing.expectEqual(@as(u8, 170), color.b);
-}
-
-test "HexRenderer.getTileEdgeColor prioritizes selected over hovered" {
-    const renderer = HexRenderer.init(30.0);
-    var drawable_set = DrawableTileSet.init(std.testing.allocator);
-    defer drawable_set.deinit();
-
-    const coord = HexCoord.init(2, 2);
-    try drawable_set.add(coord);
-
-    // Both selected and hovered - selected should win
-    const selected_tile = HexCoord.init(2, 2);
-    const hovered_tile = HexCoord.init(2, 2);
-    const color = renderer.getTileEdgeColor(coord, 0, &drawable_set, selected_tile, hovered_tile);
-
-    // Should be selected color (blue), not hovered (gray)
-    try std.testing.expectEqual(@as(u8, 120), color.r);
-    try std.testing.expectEqual(@as(u8, 180), color.g);
-    try std.testing.expectEqual(@as(u8, 255), color.b);
-}
-
-test "HexRenderer.getTileEdgeColor considers neighbor priority" {
-    const renderer = HexRenderer.init(30.0);
-    var drawable_set = DrawableTileSet.init(std.testing.allocator);
-    defer drawable_set.deinit();
-
-    const coord = HexCoord.init(0, 0);
-    const neighbor = HexCoord.init(1, 0); // East neighbor (direction 0)
-
-    try drawable_set.add(coord);
-    try drawable_set.add(neighbor);
-
-    // This tile is normal, but neighbor is selected
-    const selected_tile = HexCoord.init(1, 0);
-    const color = renderer.getTileEdgeColor(coord, 0, &drawable_set, selected_tile, null);
-
-    // Should use neighbor's selected color (priority propagation)
-    try std.testing.expectEqual(@as(u8, 120), color.r);
-    try std.testing.expectEqual(@as(u8, 180), color.g);
-    try std.testing.expectEqual(@as(u8, 255), color.b);
 }

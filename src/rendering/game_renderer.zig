@@ -105,7 +105,25 @@ pub const GameRenderer = struct {
         }
 
         // Draw all edges once using optimized rendering (50% fewer draw calls)
-        self.hex_renderer.drawOptimizedEdges(&drawable_set, selected_tile, hovered_tile, screen_width, screen_height);
+        // Note: This only draws the grid - selection highlighting will be added separately
+        self.hex_renderer.drawOptimizedEdges(&drawable_set, screen_width, screen_height);
+
+        // DEBUG: Draw coordinates in center of each hex
+        it = grid.tiles.iterator();
+        while (it.next()) |entry| {
+            const coord = entry.key_ptr.*;
+            const pixel = self.hex_renderer.layout.hexToPixel(coord);
+            const screen_pos = self.hex_renderer.camera.worldToScreen(pixel.x, pixel.y, screen_width, screen_height);
+
+            var buf: [32:0]u8 = undefined;
+            const label = std.fmt.bufPrintZ(&buf, "{d},{d}", .{ coord.q, coord.r }) catch "??";
+
+            const text_width = rl.measureText(label, 10);
+            const text_x: i32 = @as(i32, @intFromFloat(screen_pos.x)) - @divTrunc(text_width, 2);
+            const text_y: i32 = @as(i32, @intFromFloat(screen_pos.y)) - 5;
+
+            rl.drawText(label, text_x, text_y, 10, rl.Color.white);
+        }
     }
 
     /// Render all entities with hover/selection highlighting

@@ -86,26 +86,42 @@ pub const HexCoord = struct {
         };
     }
 
-    /// Direction vectors for the 6 neighbors (flat-top hexagons)
-    const directions = [6]HexCoord{
-        HexCoord{ .q = 1, .r = 0 },  // East
-        HexCoord{ .q = 1, .r = -1 }, // Northeast
-        HexCoord{ .q = 0, .r = -1 }, // Northwest
-        HexCoord{ .q = -1, .r = 0 }, // West
-        HexCoord{ .q = -1, .r = 1 }, // Southwest
-        HexCoord{ .q = 0, .r = 1 },  // Southeast
-    };
+    fn directions(orientation: bool) [6]HexCoord {
+        if (orientation) {
+            // Flat-top
+            return [_]HexCoord{
+                HexCoord{ .q = 1, .r = -1 },
+                HexCoord{ .q = 0, .r = -1 },
+                HexCoord{ .q = -1, .r = 0 },
+                HexCoord{ .q = -1, .r = 1 },
+                HexCoord{ .q = 0, .r = 1 },
+                HexCoord{ .q = 1, .r = 0 },
+            };
+        } else {
+            // Pointy-top (rotate directions)
+            return [_]HexCoord{
+                HexCoord{ .q = 1, .r = 0 },
+                HexCoord{ .q = 0, .r = 1 }, // East
+                HexCoord{ .q = -1, .r = 1 }, // Northeast
+                HexCoord{ .q = -1, .r = 0 }, // Northwest
+                HexCoord{ .q = 0, .r = -1 }, // West
+                HexCoord{ .q = 1, .r = -1 },
+                // Southwest
+                // Southeast
+            };
+        }
+    }
 
     /// Get neighbor in a given direction (0-5)
-    pub fn neighbor(self: HexCoord, direction: u3) HexCoord {
-        return self.add(directions[direction]);
+    pub fn neighbor(self: HexCoord, orientation: bool, direction: u3) HexCoord {
+        return self.add(directions(orientation)[direction]);
     }
 
     /// Get all 6 neighbors
-    pub fn neighbors(self: HexCoord) [6]HexCoord {
+    pub fn neighbors(self: HexCoord, orientation: bool) [6]HexCoord {
         var result: [6]HexCoord = undefined;
         for (0..6) |i| {
-            result[i] = self.neighbor(@intCast(i));
+            result[i] = self.neighbor(orientation, @intCast(i));
         }
         return result;
     }
