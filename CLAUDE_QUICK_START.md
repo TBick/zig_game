@@ -60,11 +60,11 @@ After reading above, you know:
 # Build and run (Linux)
 zig build run
 
-# Run tests (149 tests)
+# Run tests (207 tests)
 zig build test
 
-# Build for Windows (better graphics)
-zig build run -Dtarget=x86_64-windows
+# Build for Windows → D:\Projects\ZigGame\
+zig build windows
 
 # Format code
 zig fmt src/
@@ -72,7 +72,7 @@ zig fmt src/
 
 ### Why Windows Build?
 
-WSL2/WSLg has broken VSync (70-95 FPS instead of 60). Windows .exe runs with proper VSync and smooth graphics. Zig cross-compiles without needing Windows SDK!
+WSL2/WSLg has rendering artifacts and broken VSync. The `zig build windows` command cross-compiles a native Windows executable directly to `D:\Projects\ZigGame\zig_game.exe` for smooth 60 FPS gameplay. No Windows SDK needed!
 
 **See [CLAUDE_REFERENCE.md](CLAUDE_REFERENCE.md) for complete build options.**
 
@@ -108,7 +108,7 @@ zig_game/
 └── build.zig.zon                 # Dependencies (Raylib)
 ```
 
-**Current State**: Phase 1 Complete (100%), Phase 2 at 70%. 149 tests passing, 0 memory leaks.
+**Current State**: Phase 1 Complete (100%), Phase 2 Complete (100%). 207 tests passing, 0 memory leaks.
 
 ---
 
@@ -125,7 +125,7 @@ zig_game/
 
 ### "How do I test?"
 ```bash
-zig build test                    # All tests
+zig build test                    # All 207 tests
 zig build test -- --filter "hex"  # Specific tests
 ```
 
@@ -312,6 +312,6 @@ For ANY implementation work:
 
 ---
 
-**Quick Start Version**: 1.1 (metrics updated)
-**Last Updated**: 2025-11-24 (Session 7 - Phase 2B World API Complete)
+**Quick Start Version**: 1.2 (Windows build step added)
+**Last Updated**: 2026-02-04 (Session 10 - API fixes + Windows build)
 **For detailed reference**: See CLAUDE_REFERENCE.md

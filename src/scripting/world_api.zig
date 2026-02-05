@@ -175,7 +175,7 @@ export fn lua_world_neighbors(L: ?*lua.lua_State) c_int {
     const pos = readPositionTable(L, 1) orelse return 0;
 
     // Get all neighbors
-    const neighbor_coords = pos.neighbors();
+    const neighbor_coords = pos.neighbors(true);
 
     // Create array table with 6 entries
     lua.createTable(L, 6, 0);
@@ -464,9 +464,9 @@ test "world_api: neighbors returns 6 positions" {
         \\    assert(neighbors[i].r ~= nil, "Neighbor should have r")
         \\end
         \\
-        \\-- Verify one specific neighbor (east: q+1, r+0)
-        \\assert(neighbors[1].q == 6, "East neighbor q should be 6")
-        \\assert(neighbors[1].r == 5, "East neighbor r should be 5")
+        \\-- Verify one specific neighbor (northeast: q+1, r-1)
+        \\assert(neighbors[1].q == 6, "Northeast neighbor q should be 6")
+        \\assert(neighbors[1].r == 4, "Northeast neighbor r should be 4")
     );
 }
 

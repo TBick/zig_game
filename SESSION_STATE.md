@@ -1,8 +1,8 @@
 # Session State
 
-**Last Updated**: 2025-11-24 (Session 8 Complete)
-**Current Phase**: Phase 2 COMPLETE ✅ - Script integration working!
-**Overall Progress**: Phase 1 Complete (100%), Phase 2 COMPLETE (100%)
+**Last Updated**: 2026-02-04 (Session 10 - API Fixes + Windows Build)
+**Current Phase**: Phase 2 COMPLETE ✅ - Script integration + Advanced rendering!
+**Overall Progress**: Phase 1 Enhanced (100%), Phase 2 COMPLETE (100%)
 
 ---
 
@@ -17,7 +17,7 @@
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: 🎉 **PHASE 2 COMPLETE!** Entities now execute Lua scripts each tick with full API access (entity state, world queries, actions, memory persistence). Ready for Phase 3!
+**Current Focus**: 🎉 **PHASE 2 COMPLETE + RENDERING ENHANCED!** Entities execute Lua scripts + Advanced input/rendering systems with optimized edge drawing, hover states, and tile/entity selection. Ready for Phase 3!
 
 ---
 
@@ -105,6 +105,115 @@ Implement core game engine: hex grid system, camera controls, rendering pipeline
 - [x] Entity selection working (click to select/inspect)
 
 **Phase 1 Status**: ✅ COMPLETE (100%)
+
+---
+
+## Session 9 Enhancements (2025-12-02) - Advanced Rendering & Input
+
+### Major Refactoring & Bug Fixes
+After Phase 2 completion, significant rendering and input improvements were implemented to enhance code quality and visual polish.
+
+#### Input System Refactoring ✅
+- [x] **InputHandler Module** - Centralized all input handling (264 lines, 9 tests)
+  - Camera controls (mouse drag, wheel zoom, keyboard pan/zoom/reset)
+  - Entity selection delegation
+  - Debug toggle (F3)
+  - Frame-rate independent movement (400 px/sec * delta_time)
+
+- [x] **TileSelector Module** - Advanced tile interaction (263 lines, 8 tests)
+  - Real-time tile hover tracking
+  - Click-to-select tiles
+  - Separate hover vs selected states
+  - Grid validation (only valid tiles hoverable)
+  - Click empty space to deselect
+
+- [x] **Enhanced EntitySelector** - Dual hover/selection states (120 lines, 7 tests)
+  - Independent hover tracking (updated every frame)
+  - Separate from selection state
+  - Hover getter API for UI/tooltips
+
+- [x] **Unified Hover Priority System** - Clear interaction hierarchy
+  - Entity hover > Tile hover (only one type hovered at a time)
+  - Prevents ambiguous visual feedback
+  - Single priority check per frame
+
+**Impact**: main.zig reduced from 264→201 lines (-24%), better separation of concerns
+
+#### Rendering Refactoring ✅
+- [x] **GameRenderer Module** - Centralized rendering orchestration (~250 lines, 6 tests)
+  - Coordinator pattern (stores references, not ownership)
+  - Single `render()` method replaces 94 lines in main.zig
+  - Centralized tile color logic
+  - Layer ordering: world → UI
+
+- [x] **UIManager Module** - Stateless UI text rendering (~110 lines, 3 tests)
+  - Help text, camera info, entity/tile counts, tick info
+  - Replaces hardcoded UI scattered in main.zig
+
+- [x] **DrawableTileSet Module** - Set-based tile tracking (160 lines, 8 tests)
+  - AutoHashMap for O(1) contains checks
+  - Support for non-uniform grid shapes
+  - Foundation for fog of war, map streaming
+
+#### Optimized Edge Rendering System ✅
+- [x] **Edge Ownership Rule Implementation** - 50% draw call reduction
+  - Each tile owns edges 0-2 (NE, N, NW for flat-top)
+  - Neighbors own opposite edges (3-5)
+  - Boundary edges always drawn
+  - O(6N) → O(3N) edge drawing
+
+- [x] **HexDirection Enums** - Self-documenting direction system
+  - HexDirection_Flat: northeast, north, northwest, southwest, south, southeast
+  - HexDirection_Pointy: east, northeast, northwest, west, southwest, southeast
+  - Orientation-aware naming conventions
+
+- [x] **Orientation-Aware Neighbor System** - hex_grid.zig improvements
+  - `neighbor(orientation, direction)` - supports both hex orientations
+  - Separate direction vectors for flat-top vs pointy-top
+  - Proper cardinal direction alignment
+
+#### Critical Bug Fix ✅
+- [x] **Screen Space Coordinate System Fix** - THE ONE-LINE FIX
+  - Issue: Hexagon corners rotated clockwise (screen y-down) vs expected counter-clockwise (math y-up)
+  - Fix: Added negative sign to angle_rad calculation in hexCorners()
+  - `angle_rad = -angle_deg * std.math.pi / 180.0`
+  - Impact: All edge rendering issues resolved, perfect hex alignment
+
+#### Visual Feedback Enhancements ✅
+- [x] Tile hover highlighting (lighter gray fill + bright outline)
+- [x] Tile selection highlighting (blue fill + bright blue outline)
+- [x] Entity hover highlighting (yellow ring)
+- [x] Entity hover takes priority over tile hover
+- [x] Coordinate labels in hex centers for debugging
+
+**Test Coverage**: 185 → 207 tests (+22 new tests, 100% pass rate)
+**Performance**: 50% fewer edge draw calls, maintains 60 FPS
+
+**Session 9 Status**: ✅ COMPLETE - Major code quality & visual improvements
+
+---
+
+## Session 10: API Fixes + Windows Build Command (2026-02-04)
+
+### Fixes Applied
+Session 9's orientation-aware neighbor API changes broke 16 call sites. All fixed:
+
+- **`src/rendering/hex_renderer.zig`** - Changed `.east`/`.southeast` enums to `u3` integers
+- **`src/scripting/world_api.zig`** - Added `true` (flat-top) orientation + updated test
+- **`src/world/hex_grid.zig`** - Added orientation args + updated expected values in 2 test blocks
+
+### Windows Build Command Added
+New `zig build windows` command:
+- Cross-compiles x86_64-windows-gnu ReleaseFast
+- Deploys directly to `D:\Projects\ZigGame\zig_game.exe`
+- Refactored `build.zig` with helper functions to reduce duplication
+
+### Test Results
+- **207/207 tests pass** (100% pass rate)
+- **0 memory leaks**
+- **Windows exe**: 1.9MB, builds successfully
+
+**Session 10 Status**: ✅ COMPLETE
 
 ---
 

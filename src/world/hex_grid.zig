@@ -241,16 +241,16 @@ test "HexCoord distance" {
 test "HexCoord neighbors" {
     const center = HexCoord.init(5, 7);
 
-    // Test individual neighbors
-    try std.testing.expect(center.neighbor(0).eql(HexCoord.init(6, 7)));
-    try std.testing.expect(center.neighbor(1).eql(HexCoord.init(6, 6)));
-    try std.testing.expect(center.neighbor(2).eql(HexCoord.init(5, 6)));
-    try std.testing.expect(center.neighbor(3).eql(HexCoord.init(4, 7)));
-    try std.testing.expect(center.neighbor(4).eql(HexCoord.init(4, 8)));
-    try std.testing.expect(center.neighbor(5).eql(HexCoord.init(5, 8)));
+    // Test individual neighbors (flat-top orientation)
+    try std.testing.expect(center.neighbor(true, 0).eql(HexCoord.init(6, 6)));
+    try std.testing.expect(center.neighbor(true, 1).eql(HexCoord.init(5, 6)));
+    try std.testing.expect(center.neighbor(true, 2).eql(HexCoord.init(4, 7)));
+    try std.testing.expect(center.neighbor(true, 3).eql(HexCoord.init(4, 8)));
+    try std.testing.expect(center.neighbor(true, 4).eql(HexCoord.init(5, 8)));
+    try std.testing.expect(center.neighbor(true, 5).eql(HexCoord.init(6, 7)));
 
     // Test all neighbors at once
-    const all_neighbors = center.neighbors();
+    const all_neighbors = center.neighbors(true);
     try std.testing.expectEqual(@as(usize, 6), all_neighbors.len);
 }
 
@@ -378,24 +378,24 @@ test "HexCoord scale with zero" {
 test "HexCoord neighbor wraps around all 6 directions" {
     const center = HexCoord.init(0, 0);
 
-    // Test all 6 directions (0-5)
-    const n0 = center.neighbor(0);
-    try std.testing.expect(n0.eql(HexCoord.init(1, 0)));
+    // Test all 6 directions (0-5, flat-top orientation)
+    const n0 = center.neighbor(true, 0);
+    try std.testing.expect(n0.eql(HexCoord.init(1, -1)));
 
-    const n1 = center.neighbor(1);
-    try std.testing.expect(n1.eql(HexCoord.init(1, -1)));
+    const n1 = center.neighbor(true, 1);
+    try std.testing.expect(n1.eql(HexCoord.init(0, -1)));
 
-    const n2 = center.neighbor(2);
-    try std.testing.expect(n2.eql(HexCoord.init(0, -1)));
+    const n2 = center.neighbor(true, 2);
+    try std.testing.expect(n2.eql(HexCoord.init(-1, 0)));
 
-    const n3 = center.neighbor(3);
-    try std.testing.expect(n3.eql(HexCoord.init(-1, 0)));
+    const n3 = center.neighbor(true, 3);
+    try std.testing.expect(n3.eql(HexCoord.init(-1, 1)));
 
-    const n4 = center.neighbor(4);
-    try std.testing.expect(n4.eql(HexCoord.init(-1, 1)));
+    const n4 = center.neighbor(true, 4);
+    try std.testing.expect(n4.eql(HexCoord.init(0, 1)));
 
-    const n5 = center.neighbor(5);
-    try std.testing.expect(n5.eql(HexCoord.init(0, 1)));
+    const n5 = center.neighbor(true, 5);
+    try std.testing.expect(n5.eql(HexCoord.init(1, 0)));
 }
 
 test "HexGrid getTile returns null for non-existent coordinate" {

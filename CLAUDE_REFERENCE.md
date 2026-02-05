@@ -51,10 +51,19 @@ rm -rf zig-cache zig-out
 ### Windows Cross-Compilation (from WSL2)
 
 **Why build for Windows?**
-- WSL2/WSLg has graphics issues (no VSync, screen tearing, choppy rendering)
-- Native Windows .exe runs with proper VSync and smooth graphics
-- Zig can cross-compile without needing Windows SDK!
+- WSL2/WSLg has rendering artifacts and broken VSync
+- Native Windows .exe runs with proper VSync and smooth 60 FPS graphics
+- Zig cross-compiles without needing Windows SDK!
 
+**Quick method (recommended):**
+```bash
+# Build and deploy to D:\Projects\ZigGame\
+zig build windows
+```
+
+This builds a **ReleaseFast** Windows executable and copies it directly to `D:\Projects\ZigGame\zig_game.exe`. Then run it from Windows Explorer or PowerShell.
+
+**Manual method (more control):**
 ```bash
 # Build Windows .exe (debug mode)
 zig build -Dtarget=x86_64-windows
@@ -62,27 +71,22 @@ zig build -Dtarget=x86_64-windows
 # Build Windows .exe (optimized release)
 zig build -Dtarget=x86_64-windows -Doptimize=ReleaseFast
 
-# Build and copy to custom directory (e.g., D: drive from WSL2)
+# Build and copy to custom directory
 zig build -Dtarget=x86_64-windows -Dinstall-dir="/mnt/d/Library/game-temp"
-
-# Build release Windows .exe to custom directory
-zig build -Dtarget=x86_64-windows -Doptimize=ReleaseFast -Dinstall-dir="/mnt/d/Library/game-temp"
 ```
 
 **Output locations:**
+- `zig build windows`: `D:\Projects\ZigGame\zig_game.exe`
 - Default: `zig-out/bin/zig_game.exe`
-- Custom: `/mnt/d/Library/game-temp/zig_game.exe` (if using `-Dinstall-dir`)
+- Custom: Uses `-Dinstall-dir` path
 
 **Running the Windows .exe:**
 ```bash
+# From Windows (recommended for best performance)
+D:\Projects\ZigGame\zig_game.exe
+
 # From WSL2 (uses Windows graphics layer)
-./zig-out/bin/zig_game.exe
-
-# Or from custom directory
-/mnt/d/Library/game-temp/zig_game.exe
-
-# Or copy to Windows desktop and double-click
-cp zig-out/bin/zig_game.exe /mnt/c/Users/YourUsername/Desktop/
+/mnt/d/Projects/ZigGame/zig_game.exe
 ```
 
 ### Does `zig build run` work for Windows builds?
@@ -95,9 +99,6 @@ zig build run
 
 # Run Windows .exe from WSL2
 zig build run -Dtarget=x86_64-windows
-
-# Run Windows .exe with custom install directory
-zig build run -Dtarget=x86_64-windows -Dinstall-dir="/mnt/d/Library/game-temp"
 ```
 
 When you run a Windows .exe from WSL2, it automatically uses Windows graphics, which fixes the VSync and rendering issues!
@@ -549,6 +550,6 @@ For ANY implementation work:
 
 ---
 
-**Reference Version**: 1.0
-**Last Updated**: 2025-11-12 (Session 6)
+**Reference Version**: 1.1 (Windows build step added)
+**Last Updated**: 2026-02-04 (Session 10 - API fixes + Windows build)
 **For quick session startup**: See CLAUDE_QUICK_START.md

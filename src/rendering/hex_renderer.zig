@@ -630,7 +630,7 @@ test "HexRenderer.getEdgeVertices returns correct vertices for east direction" {
     const coord = HexCoord.init(0, 0);
 
     // Direction east should return corners[0] and corners[1]
-    const edge = renderer.getEdgeVertices(coord, .east);
+    const edge = renderer.getEdgeVertices(coord, 0);
     const corners = renderer.layout.hexCorners(coord);
 
     try std.testing.expectEqual(corners[0].x, edge.v1.x);
@@ -644,7 +644,7 @@ test "HexRenderer.getEdgeVertices wraps correctly at southeast direction" {
     const coord = HexCoord.init(1, 1);
 
     // Direction southeast should return corners[5] and corners[0] (wrap around)
-    const edge = renderer.getEdgeVertices(coord, .southeast);
+    const edge = renderer.getEdgeVertices(coord, 5);
     const corners = renderer.layout.hexCorners(coord);
 
     try std.testing.expectEqual(corners[5].x, edge.v1.x);
