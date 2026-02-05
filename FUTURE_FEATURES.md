@@ -127,6 +127,50 @@ Modified `drawOptimizedEdges()` in `src/rendering/hex_renderer.zig`:
 
 ---
 
+## Debug Window System Enhancements
+
+The debug system uses a window abstraction for debug tools. These are future enhancements:
+
+### Window Dragging
+**Goal:** Allow dragging windows by their title bar
+**Current State:** Fixed positions
+**Estimated Effort:** 2-3 hours
+
+### Window Resizing
+**Goal:** Drag window edges/corners to resize
+**Current State:** Fixed sizes
+**Estimated Effort:** 3-4 hours
+
+### Window Snapping
+**Goal:** Snap windows to screen edges and other windows
+**Current State:** Manual positioning only
+**Estimated Effort:** 3-4 hours
+
+### Window Tabbing
+**Goal:** Combine multiple windows into a tabbed container
+**Current State:** Individual windows only
+**Desired State:** Drag window onto another to create tab group
+**Estimated Effort:** 6-8 hours
+
+### Window Docking
+**Goal:** Dock windows to screen edges with auto-layout
+**Current State:** Free-floating only
+**Estimated Effort:** 8-10 hours
+
+### Window State Persistence
+**Goal:** Save window positions/sizes to file, restore on restart
+**Current State:** Default positions on each launch
+**Estimated Effort:** 2-3 hours
+
+### Additional Debug Windows (Phase 3+)
+- **Console Window:** In-game Lua output/errors (Session 13 - Release Feature)
+- **Pathfinding Visualizer:** Show A* paths and costs
+- **Resource Inspector:** View resource deposits and quantities
+- **Script Debugger:** Step through Lua execution
+- **Performance Profiler:** Detailed timing breakdown
+
+---
+
 ## Future Architectural Improvements
 
 ### Rendering Backend Abstraction
@@ -150,4 +194,4 @@ Modified `drawOptimizedEdges()` in `src/rendering/hex_renderer.zig`:
 - Items are not in strict priority order within sections
 - This list will grow as new ideas emerge
 
-**Last Updated:** 2025-12-02 (Session 9 - Post Rendering Refactor)
+**Last Updated:** 2026-02-05 (Session 12 - Debug System Refactor Planning)

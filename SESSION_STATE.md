@@ -1,8 +1,8 @@
 # Session State
 
-**Last Updated**: 2026-02-05 (Session 11 - Phase 2 Validation & Polish)
-**Current Phase**: Phase 2 COMPLETE ✅ - Scripts executing + Seamless rendering!
-**Overall Progress**: Phase 1 Enhanced (100%), Phase 2 COMPLETE (100%), Phase 3 Ready
+**Last Updated**: 2026-02-05 (Session 12 - Debug System Refactor)
+**Current Phase**: Debug System Refactor (Pre-Phase 3 Architecture Work)
+**Overall Progress**: Phase 1 Enhanced (100%), Phase 2 COMPLETE (100%), Debug Refactor In Progress
 
 ---
 
@@ -17,7 +17,7 @@
 | Phase 4: UI & Editor | Not Started | 0% | Blocked on Phase 3 |
 | Phase 5: Content & Polish | Not Started | 0% | Blocked on Phase 4 |
 
-**Current Focus**: 🎉 **PHASE 2 COMPLETE + RENDERING ENHANCED!** Entities execute Lua scripts + Advanced input/rendering systems with optimized edge drawing, hover states, and tile/entity selection. Ready for Phase 3!
+**Current Focus**: 🔧 **DEBUG SYSTEM REFACTOR** - Building compile-time debug architecture with window abstraction before Phase 3. This ensures clean release builds and scalable debug tooling.
 
 ---
 
@@ -258,6 +258,147 @@ New `zig build windows` command:
 - Scripts now execute every tick with console output
 
 **Session 11 Status**: ✅ COMPLETE
+
+---
+
+## Session 12: Debug System Refactor (2026-02-05)
+
+### Session Goal
+Implement compile-time debug architecture with window abstraction before Phase 3. This ensures:
+- Release builds contain zero debug code
+- Debug tools scale as features are added
+- Clean separation between debug and release functionality
+
+### Planned Architecture
+
+**Build Options:**
+- `zig build run` - Debug features ON (default)
+- `zig build release` - Debug features OFF, optimized
+- `zig build windows-release` - Windows release, no debug
+- `-Ddebug-features=false` - Explicit disable
+
+**New Module Structure:**
+```
+src/debug/
+├── debug.zig              # Central module, compile-time switches
+├── window.zig             # DebugWindow abstraction
+├── window_manager.zig     # Manages all debug windows
+├── state.zig              # Global debug state (F3 toggle)
+├── windows/               # Window content implementations
+│   ├── performance.zig    # FPS, frame time (from debug_overlay.zig)
+│   ├── entity_info.zig    # Entity details (from entity_info_panel.zig)
+│   └── tile_info.zig      # Tile details (new)
+└── overlays/              # Non-window visual overlays
+    ├── coord_labels.zig   # Hex coordinate text
+    └── selection.zig      # Hover/selection highlights
+```
+
+**Key Features:**
+- Compile-time elimination (no debug code in release binary)
+- Window abstraction (closable debug panels)
+- F3 master toggle (runtime toggle in debug builds)
+- Selection only works when debug is ON (future: release behavior)
+
+### Implementation Checklist
+
+```
+Pre-Implementation:
+[x] SESSION_STATE.md updated with plan
+[ ] CONTEXT_HANDOFF_PROTOCOL.md entry added
+[x] CLAUDE_REFERENCE.md debug section added
+[x] FUTURE_FEATURES.md updated
+[ ] Initial commit pushed
+
+Step 1 - Build Infrastructure:
+[ ] build.zig modified
+[ ] Build commands tested
+[ ] Documentation updated
+[ ] Committed
+
+Step 2 - Window Abstraction:
+[ ] src/debug/window.zig created
+[ ] src/debug/window_manager.zig created
+[ ] src/debug/state.zig created
+[ ] Documentation updated
+[ ] Committed
+
+Step 3 - Central Debug Module:
+[ ] src/debug/debug.zig created
+[ ] Documentation updated
+[ ] Committed
+
+Step 4 - Migrate Debug Code:
+[ ] performance.zig created (from debug_overlay)
+[ ] entity_info.zig created (from entity_info_panel)
+[ ] tile_info.zig created (new)
+[ ] Old files deleted
+[ ] Documentation updated
+[ ] Committed
+
+Step 5 - Create Overlays:
+[ ] coord_labels.zig created
+[ ] selection.zig created
+[ ] Documentation updated
+[ ] Committed
+
+Step 6 - Integration:
+[ ] main.zig updated
+[ ] input_handler.zig updated
+[ ] entity_selector.zig updated
+[ ] tile_selector.zig updated
+[ ] game_renderer.zig cleaned
+[ ] entity_renderer.zig cleaned
+[ ] ui_manager.zig updated
+[ ] Documentation updated
+[ ] Committed
+
+Step 7 - Testing:
+[ ] All tests pass
+[ ] Debug build works
+[ ] Release build works
+[ ] No debug strings in release binary
+[ ] Documentation updated
+[ ] Committed
+
+Step 8 - Final Documentation:
+[ ] All docs updated with final state
+[ ] Committed
+
+Step 9 - Verification:
+[ ] Subagent review complete
+[ ] Issues fixed
+
+Step 10 - Final Commit:
+[ ] Final commit made
+[ ] Pushed to GitHub
+```
+
+### Files to Create
+- `src/debug/debug.zig` (~80 lines)
+- `src/debug/window.zig` (~150 lines)
+- `src/debug/window_manager.zig` (~100 lines)
+- `src/debug/state.zig` (~50 lines)
+- `src/debug/windows/performance.zig` (~160 lines, from debug_overlay)
+- `src/debug/windows/entity_info.zig` (~180 lines, from entity_info_panel)
+- `src/debug/windows/tile_info.zig` (~80 lines, new placeholder)
+- `src/debug/overlays/coord_labels.zig` (~60 lines)
+- `src/debug/overlays/selection.zig` (~100 lines)
+
+### Files to Modify
+- `build.zig` - Add debug-features option, release targets
+- `src/main.zig` - Conditional debug initialization
+- `src/rendering/game_renderer.zig` - Remove inline debug code
+- `src/rendering/entity_renderer.zig` - Remove selection highlights
+- `src/input/input_handler.zig` - Conditional F3 and selection
+- `src/input/entity_selector.zig` - Respect debug state
+- `src/input/tile_selector.zig` - Respect debug state
+- `src/ui/ui_manager.zig` - Conditional F3 help text
+
+### Files to Delete
+- `src/ui/debug_overlay.zig` (moved to src/debug/windows/performance.zig)
+- `src/ui/entity_info_panel.zig` (moved to src/debug/windows/entity_info.zig)
+
+**Session 12 Status**: 🔄 IN PROGRESS
 
 ---
 

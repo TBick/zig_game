@@ -57,14 +57,21 @@ After reading above, you know:
 ### Quick Commands
 
 ```bash
-# Build and run (Linux)
+# Build and run (Linux) - debug features ON
 zig build run
 
 # Run tests (207 tests)
 zig build test
 
-# Build for Windows → D:\Projects\ZigGame\
+# Build for Windows → D:\Projects\ZigGame\ - debug features ON
 zig build windows
+
+# Release builds (no debug code)
+zig build release                      # Linux release
+zig build windows-release              # Windows release
+
+# Explicit debug feature control
+zig build run -Ddebug-features=false   # Disable debug features
 
 # Format code
 zig fmt src/

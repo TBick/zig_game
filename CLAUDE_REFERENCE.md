@@ -230,6 +230,61 @@ Render (60 FPS) ←────────────────────�
 
 **See `docs/design/ARCHITECTURE.md` for detailed system design.**
 
+### Debug System Architecture
+
+The debug system uses **compile-time code elimination** to ensure release builds contain zero debug code.
+
+**Build Options:**
+```bash
+# Debug builds (debug features included)
+zig build run                          # Default - debug features ON
+zig build test                         # Tests - debug features ON
+zig build windows                      # Windows dev - debug features ON
+
+# Release builds (debug features completely excluded)
+zig build release                      # Linux release - no debug code
+zig build windows-release              # Windows release - no debug code
+zig build run -Ddebug-features=false   # Explicit disable
+```
+
+**Architecture:**
+```
+src/debug/                          # All debug code isolated here
+├── debug.zig                       # Central module, compile-time switches
+├── window.zig                      # DebugWindow abstraction
+├── window_manager.zig              # Manages all debug windows
+├── state.zig                       # Global debug state (F3 toggle)
+├── windows/                        # Window content implementations
+│   ├── performance.zig             # FPS, frame time, counts
+│   ├── entity_info.zig             # Selected entity details
+│   └── tile_info.zig               # Selected tile details
+└── overlays/                       # Non-window visual overlays
+    ├── coord_labels.zig            # Hex coordinate text
+    └── selection.zig               # Hover/selection highlights
+```
+
+**Key Concepts:**
+
+1. **Compile-Time Elimination**: When `debug-features=false`, all debug code is completely removed from the binary (not just disabled at runtime).
+
+2. **Window Abstraction**: Debug tools are rendered as windows that can be opened/closed. Windows persist their state when reopened.
+
+3. **F3 Master Toggle**: In debug builds, F3 toggles all debug features on/off. When off, selection is disabled (placeholder for future release behavior).
+
+4. **Two-Tier System**:
+   - Compile-time: Determines if debug code *exists* in binary
+   - Runtime (F3): Determines if debug code is *visible* during development
+
+**Usage in Code:**
+```zig
+const debug = @import("debug/debug.zig");
+
+// Compile-time check - entire block removed in release
+if (debug.enabled) {
+    debug_system.window_manager.renderAll();
+}
+```
+
 ---
 
 ## Agent Orchestration

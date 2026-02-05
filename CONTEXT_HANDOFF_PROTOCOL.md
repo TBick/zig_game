@@ -1928,6 +1928,165 @@ Major milestone - Phase 2 is not just "complete" on paper, but actually validate
 
 ---
 
+## Session 12: 2026-02-05 - Debug System Refactor
+
+### Session Goal
+Implement compile-time debug architecture with window abstraction before Phase 3. This is pre-Phase 3 architectural work to ensure:
+- Release builds contain zero debug code (compile-time elimination)
+- Debug tools scale as new features are added
+- Clean separation between debug and release functionality
+- Window-based debug UI that can be extended
+
+### What Was Accomplished
+🔄 **IN PROGRESS** - Check SESSION_STATE.md for current checklist status
+
+**Pre-Implementation Documentation (Step 0):**
+- [x] SESSION_STATE.md updated with Session 12 plan and checklist
+- [x] CLAUDE_REFERENCE.md - Added "Debug System Architecture" section
+- [x] FUTURE_FEATURES.md - Added "Debug Window System Enhancements" section
+- [x] CONTEXT_HANDOFF_PROTOCOL.md - This entry
+- [ ] Initial commit pushed
+
+### Planned Architecture
+
+**Build Commands:**
+```bash
+zig build run                    # Debug features ON (default)
+zig build release                # Linux release, no debug code
+zig build windows-release        # Windows release, no debug code
+zig build run -Ddebug-features=false  # Explicit disable
+```
+
+**New Module Structure:**
+```
+src/debug/
+├── debug.zig              # Central module, compile-time switches
+├── window.zig             # DebugWindow abstraction (closable panels)
+├── window_manager.zig     # Manages all debug windows
+├── state.zig              # Global debug state (F3 toggle)
+├── windows/               # Window content implementations
+│   ├── performance.zig    # FPS, frame time (from debug_overlay.zig)
+│   ├── entity_info.zig    # Entity details (from entity_info_panel.zig)
+│   └── tile_info.zig      # Tile details (new, placeholder)
+└── overlays/              # Non-window visual overlays
+    ├── coord_labels.zig   # Hex coordinate text
+    └── selection.zig      # Hover/selection highlights
+```
+
+**Key Design Decisions:**
+
+1. **Compile-Time Elimination**: Using Zig's `@import("build_options")` and conditional types to completely remove debug code from release builds.
+
+2. **Window Abstraction**: Debug tools rendered as windows with:
+   - Title bar with close button
+   - Persistent state (position, open/closed)
+   - Content rendered via callback
+   - Future: dragging, resizing, tabbing, docking
+
+3. **Two-Tier Toggle System**:
+   - Compile-time: `-Ddebug-features` determines if code exists
+   - Runtime: F3 toggles visibility in debug builds
+
+4. **Selection Behavior**:
+   - Debug ON: Selection works, windows open for selected entity/tile
+   - Debug OFF: Selection disabled (placeholder for future release behavior)
+
+### What's In Progress (Not Complete)
+See SESSION_STATE.md "Implementation Checklist" for detailed status:
+- Step 1: Build Infrastructure
+- Step 2: Window Abstraction
+- Step 3: Central Debug Module
+- Step 4: Migrate Debug Code
+- Step 5: Create Overlays
+- Step 6: Integration
+- Step 7: Testing & Verification
+- Step 8: Final Documentation
+- Step 9: Documentation Verification (subagent review)
+- Step 10: Final Commit
+
+### Critical Context for Next Session
+
+**If session disconnects:**
+1. Read SESSION_STATE.md "Implementation Checklist" for last completed step
+2. Continue from next unchecked item
+3. Each commit serves as a checkpoint
+
+**Recovery Points (commits):**
+- After Step 0: `Docs: Plan debug system refactor (Session 12)`
+- After Step 1: `Build: Add debug-features compile-time option`
+- After Step 2: `Debug: Add window abstraction system`
+- After Step 3: `Debug: Add central debug module with compile-time switches`
+- After Step 4: `Debug: Migrate overlay and info panels to window system`
+- After Step 5: `Debug: Add coordinate labels and selection overlays`
+- After Step 6: `Debug: Integrate debug system into main loop`
+- After Step 7: `Debug: Verify all build configurations`
+- After Step 10: `Session 12: Complete debug system refactor with window abstraction`
+
+### Decisions Made
+
+**Decision 1: Compile-Time Debug Architecture**
+- **Rationale**: Runtime flags still include debug code in binary; compile-time elimination is cleaner
+- **Benefits**: Smaller release binaries, no debug strings, no performance overhead
+
+**Decision 2: Window Abstraction for Debug Tools**
+- **Rationale**: Debug tools should behave like windows (closable, persistent state)
+- **Benefits**: Scalable pattern for adding new debug tools, better UX
+
+**Decision 3: Selection Only in Debug Mode (for now)**
+- **Rationale**: Release selection behavior not yet designed
+- **Future**: Separate session will implement release-mode selection
+
+**Decision 4: In-Game Console as Release Feature (Next Session)**
+- **Rationale**: Console is primary player interaction area, not debug-only
+- **Plan**: Session 13 will implement console UI in bottom 1/3 of screen
+
+### Blockers / Issues
+**None** - Clear plan, ready for implementation
+
+### Recommended Next Steps
+
+**If continuing this session:**
+1. Commit pre-implementation documentation
+2. Continue with Step 1 (Build Infrastructure)
+3. Follow checklist in SESSION_STATE.md
+
+**After this session completes:**
+1. **Session 13: In-Game Console UI** - Release feature, bottom 1/3 of screen
+2. **Session 14: Release-Mode Selection** - Proper selection when debug is off
+3. **Phase 3: Gameplay Systems** - Resources, pathfinding, structures
+
+### Files Modified (Documentation Phase)
+- `SESSION_STATE.md` - Added Session 12 section with full checklist
+- `CONTEXT_HANDOFF_PROTOCOL.md` - This entry
+- `CLAUDE_REFERENCE.md` - Added "Debug System Architecture" section
+- `FUTURE_FEATURES.md` - Added "Debug Window System Enhancements" section
+
+### Agents Used
+**None yet** - Documentation phase is direct implementation
+
+### Notes
+
+**Why this refactor before Phase 3:**
+- Phase 3 will add many new systems (resources, pathfinding, structures)
+- Each system will need debug visualization
+- Building proper debug infrastructure now prevents technical debt
+- Ensures release builds are clean from the start
+
+**Estimated Session Duration:** ~5 hours total
+- Pre-Implementation Docs: 20 min
+- Build Infrastructure: 30 min
+- Window Abstraction: 45 min
+- Central Debug Module: 30 min
+- Migrate Debug Code: 45 min
+- Create Overlays: 30 min
+- Integration: 45 min
+- Testing: 30 min
+- Final Docs + Verification: 35 min
+
+**Session 12 Status**: 🔄 IN PROGRESS
+
+---
+
 ## Archive Policy
 
 Sessions are archived after completion of major phases to keep this file manageable:
