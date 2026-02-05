@@ -78,11 +78,54 @@ pub fn main() !void {
     var entity_manager = try EntityManager.init(allocator);
     defer entity_manager.deinit();
 
-    // Spawn some test entities
-    _ = try entity_manager.spawn(HexCoord{ .q = 2, .r = 2 }, .worker);
-    _ = try entity_manager.spawn(HexCoord{ .q = 5, .r = 3 }, .combat);
+    // Spawn test entities with Lua scripts for Phase 2 validation
+    // See VISUAL_TESTING_GUIDE.txt for expected behavior
+
+    // Entity 1 (Worker): Memory persistence test - counts ticks
+    const id1 = try entity_manager.spawn(HexCoord{ .q = 2, .r = 2 }, .worker);
+    if (entity_manager.getEntity(id1)) |e| {
+        e.setScript(
+            \\if memory.count == nil then
+            \\  memory.count = 0
+            \\  print("Worker initialized!")
+            \\end
+            \\memory.count = memory.count + 1
+            \\if memory.count % 10 == 0 then
+            \\  print("Worker tick count: " .. memory.count)
+            \\end
+        );
+    }
+
+    // Entity 2 (Combat): Simple movement test
+    const id2 = try entity_manager.spawn(HexCoord{ .q = 5, .r = 3 }, .combat);
+    if (entity_manager.getEntity(id2)) |e| {
+        e.setScript(
+            \\if memory.moved == nil then
+            \\  memory.moved = false
+            \\end
+            \\if not memory.moved and entity.getEnergy() > 20 then
+            \\  entity.moveTo({q=7, r=7})
+            \\  memory.moved = true
+            \\  print("Combat unit moved to (7,7)!")
+            \\end
+        );
+    }
+
+    // Entity 3 (Scout): No script - tests that scriptless entities still work
     _ = try entity_manager.spawn(HexCoord{ .q = 7, .r = 5 }, .scout);
-    _ = try entity_manager.spawn(HexCoord{ .q = 3, .r = 7 }, .engineer);
+
+    // Entity 4 (Engineer): World query test
+    const id4 = try entity_manager.spawn(HexCoord{ .q = 3, .r = 7 }, .engineer);
+    if (entity_manager.getEntity(id4)) |e| {
+        e.setScript(
+            \\if memory.checked == nil then
+            \\  memory.checked = true
+            \\  local pos = entity.getPosition()
+            \\  local nearby = world.findNearbyEntities(pos, 5)
+            \\  print("Engineer at (" .. pos.q .. "," .. pos.r .. ") sees " .. #nearby .. " nearby entities")
+            \\end
+        );
+    }
 
     // Initialize tick scheduler (2.5 ticks per second)
     var tick_scheduler = TickScheduler.init(2.5);
@@ -115,7 +158,7 @@ pub fn main() !void {
         // Process each tick (game logic runs at fixed rate)
         var i: u32 = 0;
         while (i < ticks_to_process) : (i += 1) {
-            processTick(&entity_manager, &tick_scheduler);
+            processTick(&entity_manager, &grid, &tick_scheduler);
         }
 
         // ====================================================================
@@ -156,15 +199,13 @@ pub fn main() !void {
 }
 
 /// Process one tick of game logic
-fn processTick(entity_manager: *EntityManager, tick_scheduler: *TickScheduler) void {
-    _ = entity_manager;
+fn processTick(entity_manager: *EntityManager, grid: *HexGrid, tick_scheduler: *TickScheduler) void {
     _ = tick_scheduler;
 
-    // TODO: Implement game logic here
-    // - Execute Lua scripts for entities
-    // - Process entity actions
-    // - Update world state
-    // - Handle resource distribution
+    // Execute Lua scripts for all entities and process their actions
+    entity_manager.processTick(grid) catch |err| {
+        std.debug.print("Tick processing error: {}\n", .{err});
+    };
 }
 
 test "basic functionality" {
