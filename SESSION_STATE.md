@@ -323,9 +323,9 @@ Step 2 - Window Abstraction:
 [x] Committed (96ce8c1)
 
 Step 3 - Central Debug Module:
-[ ] src/debug/debug.zig created
-[ ] Documentation updated
-[ ] Committed
+[x] src/debug/debug.zig created (4 tests, compile-time conditional types)
+[x] Documentation updated
+[x] Committed (2952d2a)
 
 Step 4 - Migrate Debug Code:
 [ ] performance.zig created (from debug_overlay)
