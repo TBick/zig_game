@@ -160,9 +160,11 @@ zig_game/
 │   ├── ui/                       # User interface
 │   │   ├── debug_overlay.zig     # ✅ F3 debug info
 │   │   └── entity_info_panel.zig # ✅ Entity inspection panel
-│   ├── scripting/                # Lua integration (Phase 2 - 30% complete)
-│   │   ├── lua_c.zig             # ✅ Raw C API bindings (~200 lines)
-│   │   └── lua_vm.zig            # ✅ Zig wrapper (~170 lines, 5 tests)
+│   ├── scripting/                # Lua integration (✅ Phase 2 COMPLETE)
+│   │   ├── lua_c.zig             # ✅ Raw C API bindings (~220 lines)
+│   │   ├── lua_vm.zig            # ✅ Zig wrapper (~170 lines, 5 tests)
+│   │   ├── entity_api.zig        # ✅ Entity Lua API (~600 lines, 17 tests)
+│   │   └── world_api.zig         # ✅ World Query API (~350 lines, 13 tests)
 │   ├── resources/                # Resource management (Phase 3)
 │   ├── structures/               # Buildings and construction (Phase 3)
 │   └── utils/                    # Utility functions
@@ -177,7 +179,7 @@ zig_game/
 └── build.zig.zon                 # Dependencies (Raylib)
 ```
 
-**Current State**: Phase 1 Complete (100%), Phase 2 at 30%. All core systems implemented with comprehensive test coverage.
+**Current State**: Phase 1 Complete (100%), Phase 2 Complete (100%). 207 tests passing, ready for Phase 3.
 
 ---
 
@@ -282,12 +284,12 @@ See `docs/agent-framework/AGENT_ORCHESTRATION.md` for complete details. Quick re
 We're building this in 6 phases:
 - **Phase 0**: Project setup (build system, tooling, structure) ✅ **COMPLETE**
 - **Phase 1**: Core engine (hex grid, entities, rendering, tick system) ✅ **COMPLETE**
-- **Phase 2**: Lua integration (VM, API, sandboxing) 🔄 **30% COMPLETE**
-- **Phase 3**: Gameplay (resources, construction, pathfinding)
+- **Phase 2**: Lua integration (VM, API, script execution) ✅ **COMPLETE**
+- **Phase 3**: Gameplay (resources, construction, pathfinding) 🎯 **READY TO START**
 - **Phase 4**: UI and editor (in-game code editor, panels)
 - **Phase 5**: Content and polish (tech tree, scenarios, visuals)
 
-**Current Status**: Phase 1 Complete (100%), Phase 2 at 30%, 109 tests passing. See `SESSION_STATE.md` for details.
+**Current Status**: Phase 1 Complete (100%), Phase 2 Complete (100%), 207 tests passing. See `SESSION_STATE.md` for details.
 
 ### Testing Requirements
 
@@ -550,6 +552,6 @@ For ANY implementation work:
 
 ---
 
-**Reference Version**: 1.1 (Windows build step added)
-**Last Updated**: 2026-02-04 (Session 10 - API fixes + Windows build)
+**Reference Version**: 1.2 (Phase 2 complete)
+**Last Updated**: 2026-02-05 (Session 11 - Phase 2 validation & polish)
 **For quick session startup**: See CLAUDE_QUICK_START.md

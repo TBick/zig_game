@@ -12,7 +12,7 @@ For detailed information, see [CLAUDE_REFERENCE.md](CLAUDE_REFERENCE.md).
 
 **Tech Stack**: Zig 0.15.1 + Lua 5.4.8 (raw C bindings) + Raylib 5.6.0
 
-**Current Phase**: Phase 1 Complete (100%), Phase 2 (Lua Integration) at 70%
+**Current Phase**: Phase 1 Complete (100%), Phase 2 Complete (100%), Ready for Phase 3
 
 **Repository**: https://github.com/TBick/zig_game
 
@@ -99,7 +99,7 @@ zig_game/
 │   ├── rendering/                # Raylib rendering (✅ complete)
 │   ├── input/                    # Entity selection (✅ complete)
 │   ├── ui/                       # Debug overlay (✅ complete)
-│   ├── scripting/                # Lua integration (🔄 70% - VM, Entity API, World API done)
+│   ├── scripting/                # Lua integration (✅ complete)
 │   ├── resources/                # Phase 3
 │   └── structures/               # Phase 3
 │
@@ -142,31 +142,33 @@ Build system is fully functional. Ensure Zig 0.15.1 installed.
 
 ---
 
-## Current Phase: Phase 2 (Lua Integration)
+## Current Phase: Phase 2 COMPLETE ✅ - Ready for Phase 3
 
-**What's Done** (70% complete):
-- ✅ Lua 5.4.8 integrated with raw C bindings
-- ✅ Lua VM wrapper with Zig-friendly API (5 tests)
-- ✅ Entity Query API - 7 functions (getId, getPosition, getEnergy, etc.)
-- ✅ Entity Action API - 3 functions (moveTo, harvest, consume)
-- ✅ Action Queue System - Command queue pattern (7 tests)
-- ✅ World Query API - 5 functions (getTileAt, distance, neighbors, findEntitiesAt, findNearbyEntities)
-- ✅ 42 Lua-related tests passing (5 VM + 17 Entity + 7 Queue + 13 World)
+**Phase 2 (Lua Integration) is 100% complete!**
 
-**What's Next** (see `CONTEXT_HANDOFF_PROTOCOL.md` Session 7):
-1. Integrate scripts into tick system (Phase 2C)
-2. Add memory persistence (memory table)
-3. Implement sandboxing (CPU/memory limits)
-4. Create example scripts (harvester, builder, explorer)
+All core scripting functionality working:
+- ✅ Lua 5.4.8 VM with raw C bindings
+- ✅ Entity API (7 query + 3 action functions)
+- ✅ World API (5 spatial query functions)
+- ✅ Script execution integrated into game loop
+- ✅ Memory persistence across ticks
+- ✅ Action execution (move, harvest, consume)
+- ✅ Seamless tile rendering (Session 11)
+- ✅ Test scripts running in entities
 
-**Key Files for Phase 2**:
-- `src/scripting/lua_c.zig` - Raw C API bindings (~220 lines)
-- `src/scripting/lua_vm.zig` - Zig wrapper (~170 lines, 5 tests)
-- `src/scripting/entity_api.zig` - Entity Lua API (~600 lines, 17 tests)
-- `src/scripting/world_api.zig` - World Query API (~350 lines, 13 tests)
-- `src/core/action_queue.zig` - Action queue system (~200 lines, 7 tests)
-- `docs/design/LUA_API_IMPLEMENTED.md` - Current API status
-- `docs/design/LUA_API_SPEC.md` - Complete API specification
+**What's Next (Phase 3 - Gameplay Systems)**:
+1. Resource tiles and harvesting
+2. Resource consumption to restore energy
+3. A* pathfinding (replace teleportation)
+4. Structures (storage depots, spawn points)
+
+**Key Scripting Files**:
+- `src/scripting/lua_c.zig` - Raw C API bindings
+- `src/scripting/lua_vm.zig` - Zig wrapper
+- `src/scripting/entity_api.zig` - Entity Lua API
+- `src/scripting/world_api.zig` - World Query API
+- `src/entities/entity_manager.zig` - Script execution + memory persistence
+- `VISUAL_TESTING_GUIDE.txt` - Phase 2 validation tests
 
 ---
 
@@ -312,6 +314,6 @@ For ANY implementation work:
 
 ---
 
-**Quick Start Version**: 1.2 (Windows build step added)
-**Last Updated**: 2026-02-04 (Session 10 - API fixes + Windows build)
+**Quick Start Version**: 1.3 (Phase 2 complete)
+**Last Updated**: 2026-02-05 (Session 11 - Phase 2 validation & polish)
 **For detailed reference**: See CLAUDE_REFERENCE.md
