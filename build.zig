@@ -56,11 +56,12 @@ fn configureLua(step: *std.Build.Step.Compile, b: *std.Build, target: std.Build.
     step.linkLibC();
 }
 
-/// Create an executable with raylib and Lua configured
+/// Create an executable with raylib, Lua, and build_options configured
 fn createExe(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
 ) *std.Build.Step.Compile {
     // Get raylib-zig dependency for this target
     const raylib_dep = b.dependency("raylib_zig", .{
@@ -78,6 +79,7 @@ fn createExe(
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "raylib", .module = raylib },
+                .{ .name = "build_options", .module = build_options.createModule() },
             },
         }),
     });
@@ -96,10 +98,21 @@ pub fn build(b: *std.Build) void {
     // Optional custom install directory
     const install_dir = b.option([]const u8, "install-dir", "Custom installation directory") orelse null;
 
+    // Debug features option - defaults to true for Debug builds, false for Release builds
+    const enable_debug_features = b.option(
+        bool,
+        "debug-features",
+        "Enable debug features (default: true for Debug, false for Release)",
+    ) orelse (optimize == .Debug);
+
+    // Create build_options module to pass compile-time options to source code
+    const build_options = b.addOptions();
+    build_options.addOption(bool, "enable_debug_features", enable_debug_features);
+
     // ========================================================================
     // Default build (native target)
     // ========================================================================
-    const exe = createExe(b, target, optimize);
+    const exe = createExe(b, target, optimize, build_options);
 
     // Install the executable to default location (zig-out/bin/)
     b.installArtifact(exe);
@@ -128,6 +141,7 @@ pub fn build(b: *std.Build) void {
     // ========================================================================
     // Windows cross-compile build: zig build windows
     // Outputs to D:\Projects\ZigGame\ (accessible as /mnt/d/Projects/ZigGame from WSL)
+    // Debug features enabled (for development testing on Windows)
     // ========================================================================
     const windows_target = b.resolveTargetQuery(.{
         .cpu_arch = .x86_64,
@@ -135,7 +149,7 @@ pub fn build(b: *std.Build) void {
         .abi = .gnu,
     });
 
-    const windows_exe = createExe(b, windows_target, .ReleaseFast);
+    const windows_exe = createExe(b, windows_target, .ReleaseFast, build_options);
 
     // Copy to Windows directory using a system command (since Zig's install system
     // doesn't support absolute paths outside the build prefix)
@@ -146,11 +160,43 @@ pub fn build(b: *std.Build) void {
     copy_to_windows.addFileArg(windows_exe.getEmittedBin());
     copy_to_windows.addArg(windows_output_dir ++ "/zig_game.exe");
 
-    const windows_step = b.step("windows", "Cross-compile for Windows and install to D:\\Projects\\ZigGame\\");
+    const windows_step = b.step("windows", "Cross-compile for Windows (with debug features) to D:\\Projects\\ZigGame\\");
     windows_step.dependOn(&copy_to_windows.step);
 
     // ========================================================================
-    // Test step (native target only)
+    // Release build (native target): zig build release
+    // No debug features, fully optimized
+    // ========================================================================
+    const release_build_options = b.addOptions();
+    release_build_options.addOption(bool, "enable_debug_features", false);
+
+    const release_exe = createExe(b, target, .ReleaseFast, release_build_options);
+    const install_release = b.addInstallArtifact(release_exe, .{});
+
+    const release_step = b.step("release", "Build optimized release (no debug features)");
+    release_step.dependOn(&install_release.step);
+
+    // ========================================================================
+    // Windows release build: zig build windows-release
+    // No debug features, fully optimized, outputs to D:\Projects\ZigGame\
+    // ========================================================================
+    const windows_release_options = b.addOptions();
+    windows_release_options.addOption(bool, "enable_debug_features", false);
+
+    const windows_release_exe = createExe(b, windows_target, .ReleaseFast, windows_release_options);
+
+    const copy_windows_release = b.addSystemCommand(&.{
+        "cp",
+        "-f",
+    });
+    copy_windows_release.addFileArg(windows_release_exe.getEmittedBin());
+    copy_windows_release.addArg(windows_output_dir ++ "/zig_game.exe");
+
+    const windows_release_step = b.step("windows-release", "Cross-compile release for Windows (no debug) to D:\\Projects\\ZigGame\\");
+    windows_release_step.dependOn(&copy_windows_release.step);
+
+    // ========================================================================
+    // Test step (native target only, debug features enabled)
     // ========================================================================
     const raylib_dep = b.dependency("raylib_zig", .{
         .target = target,
@@ -164,6 +210,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "raylib", .module = raylib_dep.module("raylib") },
+                .{ .name = "build_options", .module = build_options.createModule() },
             },
         }),
     });

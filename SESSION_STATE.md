@@ -310,10 +310,10 @@ Pre-Implementation:
 [ ] Initial commit pushed
 
 Step 1 - Build Infrastructure:
-[ ] build.zig modified
-[ ] Build commands tested
-[ ] Documentation updated
-[ ] Committed
+[x] build.zig modified
+[x] Build commands tested
+[x] Documentation updated
+[x] Committed (53bb0a9)
 
 Step 2 - Window Abstraction:
 [ ] src/debug/window.zig created
