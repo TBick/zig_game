@@ -267,16 +267,16 @@ pub const HexRenderer = struct {
         rl.drawLineV(screen_v1, screen_v2, color);
     }
 
-    /// Draw optimized edges for a set of drawable tiles (grid rendering only, no highlights)
-    /// Uses Edge Ownership Rule: each tile draws owned edges (E, NE, NW) PLUS boundary edges
-    /// This achieves 50% reduction in draw calls (O(6N) → O(3N))
+    /// Draw seamless edges for a set of drawable tiles
+    /// Only draws boundary edges (edges where there's no neighboring tile)
+    /// Interior edges are not drawn, creating a seamless filled appearance
+    /// Result: Smooth filled regions with clear boundary outlines
     pub fn drawOptimizedEdges(
         self: *HexRenderer,
         drawable_set: *const DrawableTileSet,
         screen_width: i32,
         screen_height: i32,
     ) void {
-        //const debug = true; // Set to true to enable debug prints
         const edgeColor = rl.Color{
             .r = 255,
             .g = 255,
@@ -287,22 +287,15 @@ pub const HexRenderer = struct {
         var it = drawable_set.iterator();
         while (it.next()) |coord_ptr| {
             const coord = coord_ptr.*;
-
-            // Debug tiles (1,0) and (1,1) to see edge sharing
             const neighbors: [6]HexCoord = coord.neighbors(self.layout.orientation);
 
             var index: u3 = 0;
-            for (neighbors) |c| {
-                if (drawable_set.contains(c)) {
-                    // Not a boundary, need to determine ownership
-                    if (index <= 2) {
-                        // Owned edge (NE, N, NW), always draw
-                        drawEdgeSegment(self, coord, edgeColor, index, screen_width, screen_height);
-                    }
-                } else {
-                    // Boundary edge, draw it.
+            for (neighbors) |neighbor_coord| {
+                if (!drawable_set.contains(neighbor_coord)) {
+                    // Boundary edge (no neighbor in this direction) - draw it
                     drawEdgeSegment(self, coord, edgeColor, index, screen_width, screen_height);
                 }
+                // If neighbor exists: skip drawing (interior edge - seamless)
                 index += 1;
             }
         }
