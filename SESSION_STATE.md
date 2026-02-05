@@ -328,12 +328,12 @@ Step 3 - Central Debug Module:
 [x] Committed (2952d2a)
 
 Step 4 - Migrate Debug Code:
-[ ] performance.zig created (from debug_overlay)
-[ ] entity_info.zig created (from entity_info_panel)
-[ ] tile_info.zig created (new)
-[ ] Old files deleted
-[ ] Documentation updated
-[ ] Committed
+[x] performance.zig created (from debug_overlay) - 3 tests
+[x] entity_info.zig created (from entity_info_panel) - 3 tests
+[x] tile_info.zig created (new) - 3 tests
+[ ] Old files deleted (deferred to Step 6 integration)
+[x] Documentation updated
+[x] Committed (934c60e)
 
 Step 5 - Create Overlays:
 [ ] coord_labels.zig created
