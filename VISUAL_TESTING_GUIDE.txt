@@ -1,0 +1,383 @@
+================================================================================
+                    VISUAL TESTING GUIDE - LUA SCRIPT EXECUTION
+                              Phase 2 Complete - Session 8
+================================================================================
+
+PURPOSE
+-------
+This guide helps you visually test that Lua scripts are executing correctly
+on entities. You'll spawn entities, assign scripts, and observe their behavior
+in real-time to verify Phase 2 (Lua Integration) is working as designed.
+
+
+PREPARATION
+-----------
+1. Build the game:
+   zig build run
+
+2. The game will start with a 10x10 hex grid and 4 test entities.
+
+3. Entities should be visible as colored circles on hex tiles:
+   - Workers: Green circles
+   - Combat: Red circles
+   - Scout: Blue circles
+   - Engineer: Yellow circles
+
+
+HOW TO ASSIGN SCRIPTS TO ENTITIES
+----------------------------------
+Currently, scripts must be assigned programmatically in src/main.zig after
+spawning entities. Here's the pattern:
+
+    // Spawn entity
+    const id = try entity_manager.spawn(HexCoord{ .q = 2, .r = 2 }, .worker);
+
+    // Get entity and assign script
+    const entity = entity_manager.getEntity(id).?;
+    entity.setScript("print('Hello from entity ' .. self.id)");
+
+Add these modifications in main.zig after line 76 (after spawning test entities).
+
+
+TEST SCRIPTS
+------------
+Below are 10 test scripts you can use. Each tests different aspects of the
+Lua integration system.
+
+
+TEST 1: Simple Print
+--------------------
+Purpose: Verify scripts execute and can print to console
+Expected: Console output each tick showing entity ID
+
+Script:
+    print("Entity " .. self.id .. " tick!")
+
+Instructions:
+1. Assign this script to one entity (e.g., the worker at position 2,2)
+2. Run the game (zig build run)
+3. Look at console output - you should see "Entity X tick!" repeatedly
+4. Verify tick messages appear at ~2.5 times per second (tick rate)
+
+
+TEST 2: Movement (Simple)
+-------------------------
+Purpose: Verify moveTo action works
+Expected: Entity teleports to new position, stays there
+
+Script:
+    entity.moveTo({q=7, r=7})
+
+Instructions:
+1. Assign to worker at position (2,2)
+2. Note worker's starting position
+3. Run game
+4. After 1-2 ticks, worker should jump to position (7,7)
+5. Worker stays at (7,7) and continues executing script
+6. Click entity to see info panel - verify position is (7,7)
+
+
+TEST 3: Memory Persistence (Tick Counter)
+------------------------------------------
+Purpose: Verify memory table persists across ticks
+Expected: Counter increments, prints every 10 ticks
+
+Script:
+    if memory.count == nil then
+      memory.count = 0
+    end
+    memory.count = memory.count + 1
+    if memory.count % 10 == 0 then
+      print("Entity " .. self.id .. " reached tick " .. memory.count)
+    end
+
+Instructions:
+1. Assign to any entity
+2. Watch console output
+3. Should see "Entity X reached tick 10" after ~4 seconds
+4. Then "tick 20" after another ~4 seconds
+5. This proves memory survives across ticks
+
+
+TEST 4: Energy-Aware Movement
+------------------------------
+Purpose: Verify entity API works (getEnergy) and energy consumption
+Expected: Entity moves only when energy > 50, eventually stops
+
+Script:
+    local energy = entity.getEnergy()
+    if energy > 50 then
+      entity.moveTo({q=self.position.q + 1, r=self.position.r})
+      print("Moving! Energy: " .. energy)
+    else
+      print("Low energy, not moving. Energy: " .. energy)
+    end
+
+Instructions:
+1. Assign to worker at (2,2)
+2. Watch entity move rightward (q increases)
+3. Each move costs 5 energy
+4. After ~20 moves (100 starting energy / 5 per move), entity stops
+5. Console shows "Low energy" messages
+6. Click entity - info panel shows energy near 0
+
+
+TEST 5: Patrol Pattern (Square)
+--------------------------------
+Purpose: Verify memory persistence with complex state machine
+Expected: Entity moves in square pattern indefinitely
+
+Script:
+    if memory.patrol == nil then
+      memory.patrol = {state = 1, steps = 0}
+      memory.start = {q = self.position.q, r = self.position.r}
+    end
+
+    local targets = {
+      {q = memory.start.q + 5, r = memory.start.r},
+      {q = memory.start.q + 5, r = memory.start.r + 5},
+      {q = memory.start.q, r = memory.start.r + 5},
+      {q = memory.start.q, r = memory.start.r}
+    }
+
+    local target = targets[memory.patrol.state]
+    entity.moveTo(target)
+
+    if self.position.q == target.q and self.position.r == target.r then
+      memory.patrol.state = (memory.patrol.state % 4) + 1
+    end
+
+Instructions:
+1. Assign to worker at (2,2)
+2. Entity should move in square: (2,2) -> (7,2) -> (7,7) -> (2,7) -> (2,2)
+3. Pattern repeats as long as entity has energy
+4. Demonstrates complex state machine with memory
+
+
+TEST 6: World Query (Find Tile)
+--------------------------------
+Purpose: Verify world API works (getTileAt)
+Expected: Console prints tile info
+
+Script:
+    local tile = world.getTileAt(5, 5)
+    if tile then
+      print("Found tile at 5,5: q=" .. tile.coord.q .. " r=" .. tile.coord.r)
+    else
+      print("No tile at 5,5")
+    end
+
+Instructions:
+1. Assign to any entity
+2. Console should print "Found tile at 5,5: q=5 r=5" each tick
+3. Try changing coordinates (5,5) to (100,100) - should print "No tile"
+4. Verifies world query API is accessible
+
+
+TEST 7: Nearby Entity Detection
+--------------------------------
+Purpose: Verify world.findNearbyEntities works
+Expected: Console shows nearby entity count
+
+Script:
+    local pos = entity.getPosition()
+    local nearby = world.findNearbyEntities(pos, 5)
+    print("Entity " .. self.id .. " sees " .. #nearby .. " nearby entities")
+
+Instructions:
+1. Assign to 2+ entities close together (within 5 hex distance)
+2. Console should show each entity detecting the others
+3. Move entities apart - nearby count decreases
+4. Verifies spatial queries work
+
+
+TEST 8: Role-Based Behavior
+----------------------------
+Purpose: Verify entity.getRole() and conditional behavior
+Expected: Different roles act differently
+
+Script:
+    local role = entity.getRole()
+    if role == "worker" then
+      entity.moveTo({q=0, r=0})
+    elseif role == "combat" then
+      entity.moveTo({q=9, r=9})
+    elseif role == "scout" then
+      entity.moveTo({q=9, r=0})
+    else
+      entity.moveTo({q=0, r=9})
+    end
+
+Instructions:
+1. Assign SAME script to all 4 starting entities
+2. Run game
+3. Workers move to (0,0)
+4. Combat entities move to (9,9)
+5. Scouts move to (9,0)
+6. Engineers move to (0,9)
+7. Verifies role detection and conditional logic
+
+
+TEST 9: Error Handling (Intentional Failure)
+---------------------------------------------
+Purpose: Verify broken scripts don't crash the game
+Expected: Error logged, game continues, other entities unaffected
+
+Script:
+    this is intentionally broken lua syntax!
+
+Instructions:
+1. Assign to one entity (e.g., worker)
+2. Assign TEST 1 (Simple Print) to different entity
+3. Run game
+4. Console shows error for broken script
+5. But other entity's print messages still appear
+6. Game doesn't crash - verifies error isolation
+
+
+TEST 10: Multi-Entity Stress Test
+----------------------------------
+Purpose: Verify multiple entities running scripts simultaneously
+Expected: All entities execute independently, no conflicts
+
+Instructions:
+1. Modify main.zig to spawn 10 workers in a row:
+   for (0..10) |i| {
+       const id = try entity_manager.spawn(
+           HexCoord{ .q = @intCast(i), .r = 0 },
+           .worker
+       );
+       const entity = entity_manager.getEntity(id).?;
+       entity.setScript("entity.moveTo({q=self.position.q, r=5})");
+   }
+
+2. Run game
+3. All 10 entities should move south (r increases) simultaneously
+4. No crashes, no conflicts
+5. Performance should remain 60 FPS (check with F3 debug overlay)
+
+
+OBSERVING RESULTS
+-----------------
+Use these tools to verify behavior:
+
+1. CONSOLE OUTPUT
+   - Lua print() statements appear in terminal
+   - Script errors also logged here
+   - Look for expected messages from your test scripts
+
+2. ENTITY INFO PANEL (Click entity)
+   - Shows ID, role, position, energy, alive status
+   - Use to verify position changes after moveTo
+   - Use to verify energy decreases after actions
+
+3. DEBUG OVERLAY (Press F3)
+   - FPS counter (should stay at 60)
+   - Entity count
+   - Frame time
+   - Use to monitor performance with multiple scripted entities
+
+4. VISUAL OBSERVATION
+   - Watch entities teleport to new positions
+   - Colored circles move around the grid
+   - Workers (green), Combat (red), Scouts (blue), Engineers (yellow)
+
+
+EXPECTED BEHAVIOR CHECKLIST
+----------------------------
+After running all tests, you should observe:
+
+[ ] Scripts execute every tick (~2.5 times per second)
+[ ] moveTo actions cause entities to teleport
+[ ] Energy decreases when actions are performed
+[ ] Memory persists across ticks (counters increment)
+[ ] Multiple entities run independently
+[ ] Broken scripts log errors but don't crash game
+[ ] Entity API functions work (getEnergy, getRole, getPosition)
+[ ] World API functions work (getTileAt, findNearbyEntities)
+[ ] Performance stays at 60 FPS with 10-20 scripted entities
+
+
+KNOWN LIMITATIONS
+-----------------
+1. INSTANT TELEPORTATION
+   Movement is instant (no pathfinding yet). Entities jump directly to target
+   position. Phase 3 will add proper pathfinding with multi-step movement.
+
+2. ENERGY DOESN'T REGENERATE
+   Once energy reaches 0, entity stops acting. Phase 3 will add resource
+   consumption to restore energy.
+
+3. NO SANDBOXING
+   Scripts can run forever (no CPU limits) and use unlimited memory. This is
+   acceptable for development. Sandboxing can be added later if needed.
+
+4. SCRIPT ASSIGNMENT IS MANUAL
+   Currently must edit main.zig to assign scripts. A proper UI for script
+   editing will come in Phase 4.
+
+
+TROUBLESHOOTING
+---------------
+PROBLEM: Scripts don't seem to execute
+SOLUTION: Check console for Lua errors. Verify script assigned with setScript().
+          Ensure processTick() is being called in main game loop.
+
+PROBLEM: Entities don't move when moveTo is called
+SOLUTION: Verify entity has energy (> 0). Click entity to check info panel.
+          Each move costs 5 energy. Starting energy is 100 for workers.
+
+PROBLEM: Memory doesn't persist
+SOLUTION: Verify you're using 'memory' global (not local variable).
+          Use memory.foo = 1, not local foo = 1.
+
+PROBLEM: Game crashes when script executes
+SOLUTION: Check script syntax. Lua syntax errors should be caught and logged,
+          not crash game. If crashing, may be a bug - please report.
+
+PROBLEM: Performance drops below 60 FPS
+SOLUTION: Check number of entities with scripts. 10-20 should be fine.
+          If performance issues with < 50 entities, may need optimization.
+
+
+SUCCESS CRITERIA
+----------------
+Phase 2 (Lua Integration) is considered successfully complete if:
+
+1. At least 5 of the 10 test scripts work as described
+2. Multiple entities can run scripts simultaneously without conflicts
+3. Memory persistence works (TEST 3 shows increasing counter)
+4. Actions execute (TEST 2 shows movement)
+5. No crashes when running all tests
+6. Performance stays at 60 FPS with 10-20 scripted entities
+
+
+NEXT STEPS
+----------
+After completing visual testing:
+
+1. Report any issues or unexpected behavior
+2. Note which tests passed/failed
+3. Provide feedback on script API usability
+4. Discuss readiness to move to Phase 3 (Resources & Structures)
+
+
+PHASE 3 PREVIEW
+---------------
+Phase 3 will add:
+- Resource tiles (energy, minerals, etc.)
+- Resource harvesting (actual resource collection, not just energy cost)
+- Resource consumption (restore energy by consuming resources)
+- Pathfinding (A* multi-step movement instead of teleportation)
+- Structures (storage depots, spawn points, walls, etc.)
+
+This will make scripts much more interesting - entities can actually gather,
+store, and consume resources to sustain themselves!
+
+
+================================================================================
+                            END OF TESTING GUIDE
+================================================================================
+
+Generated: 2025-11-24 (Session 8 - Phase 2 Complete)
+Version: 1.0
