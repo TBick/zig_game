@@ -316,11 +316,11 @@ Step 1 - Build Infrastructure:
 [x] Committed (53bb0a9)
 
 Step 2 - Window Abstraction:
-[ ] src/debug/window.zig created
-[ ] src/debug/window_manager.zig created
-[ ] src/debug/state.zig created
-[ ] Documentation updated
-[ ] Committed
+[x] src/debug/window.zig created (3 tests)
+[x] src/debug/window_manager.zig created (5 tests)
+[x] src/debug/state.zig created (5 tests)
+[x] Documentation updated
+[x] Committed (96ce8c1)
 
 Step 3 - Central Debug Module:
 [ ] src/debug/debug.zig created
