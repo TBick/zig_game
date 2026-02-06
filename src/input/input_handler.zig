@@ -7,7 +7,7 @@ const EntityManager = @import("../entities/entity_manager.zig").EntityManager;
 const Entity = @import("../entities/entity.zig").Entity;
 const EntityId = @import("../entities/entity.zig").EntityId;
 const HexLayout = @import("../rendering/hex_renderer.zig").HexLayout;
-const DebugOverlay = @import("../ui/debug_overlay.zig").DebugOverlay;
+const debug = @import("../debug/debug.zig");
 const HexGrid = @import("../world/hex_grid.zig").HexGrid;
 const HexCoord = @import("../world/hex_grid.zig").HexCoord;
 
@@ -38,7 +38,7 @@ pub const InputHandler = struct {
         entity_manager: *EntityManager,
         grid: *HexGrid,
         layout: *const HexLayout,
-        debug_overlay: *DebugOverlay,
+        debug_state: *debug.State,
         screen_width: i32,
         screen_height: i32,
     ) void {
@@ -59,7 +59,7 @@ pub const InputHandler = struct {
         }
 
         // Update debug controls (F3 toggle)
-        self.updateDebug(debug_overlay);
+        self.updateDebug(debug_state);
 
         // Save mouse position for next frame (drag tracking)
         self.last_mouse_pos = rl.getMousePosition();
@@ -212,16 +212,13 @@ pub const InputHandler = struct {
         }
     }
 
-    fn updateDebug(self: *InputHandler, debug_overlay: *DebugOverlay) void {
+    fn updateDebug(self: *InputHandler, debug_state: *debug.State) void {
         _ = self;
 
-        // Toggle debug overlay with F3
+        // Toggle all debug features with F3
         if (rl.isKeyPressed(rl.KeyboardKey.f3)) {
-            debug_overlay.toggle();
+            debug_state.toggle();
         }
-
-        // Update debug overlay
-        debug_overlay.update();
     }
 };
 
@@ -260,11 +257,11 @@ test "InputHandler.update compiles without errors" {
 
     var camera = Camera.init();
     var handler = InputHandler.init(&camera);
-    var debug_overlay = DebugOverlay.init();
+    var debug_state = debug.State.init();
     const layout = HexLayout.init(30.0, true);
 
     // Verify update() can be called
-    handler.update(0.016, &manager, &grid, &layout, &debug_overlay, 800, 600);
+    handler.update(0.016, &manager, &grid, &layout, &debug_state, 800, 600);
 
     try std.testing.expect(true);
 }
@@ -378,13 +375,13 @@ test "InputHandler.getSelectedEntity returns null when no selection" {
 // Debug Control Test
 // ============================================================================
 
-test "InputHandler.updateDebug calls debug overlay" {
+test "InputHandler.updateDebug calls debug state" {
     var camera = Camera.init();
     var handler = InputHandler.init(&camera);
-    var debug_overlay = DebugOverlay.init();
+    var debug_state = debug.State.init();
 
     // Verify debug methods are called
-    handler.updateDebug(&debug_overlay);
+    handler.updateDebug(&debug_state);
 
     try std.testing.expect(true);
 }

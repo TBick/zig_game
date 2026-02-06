@@ -19,8 +19,8 @@ pub const DebugWindow = struct {
     /// Window identifier for lookup
     id: WindowId,
 
-    /// Window title displayed in title bar
-    title: []const u8,
+    /// Window title displayed in title bar (must be null-terminated for raylib)
+    title: [:0]const u8,
 
     /// Position (top-left corner)
     x: i32,
@@ -47,7 +47,7 @@ pub const DebugWindow = struct {
     pub const close_button_hover_color = rl.Color.init(220, 80, 80, 255);
 
     /// Initialize a debug window with the given parameters
-    pub fn init(id: WindowId, title: []const u8, x: i32, y: i32, width: i32, height: i32) DebugWindow {
+    pub fn init(id: WindowId, title: [:0]const u8, x: i32, y: i32, width: i32, height: i32) DebugWindow {
         return DebugWindow{
             .id = id,
             .title = title,
@@ -75,7 +75,7 @@ pub const DebugWindow = struct {
 
         // Draw title text
         rl.drawText(
-            @ptrCast(self.title.ptr),
+            self.title,
             self.x + 6,
             self.y + 4,
             14,
@@ -158,12 +158,12 @@ pub const ContentArea = struct {
     height: i32,
 
     /// Draw text at a position relative to content area
-    pub fn drawText(self: ContentArea, text: [*:0]const u8, rel_x: i32, rel_y: i32, font_size: i32, color: rl.Color) void {
+    pub fn drawText(self: ContentArea, text: [:0]const u8, rel_x: i32, rel_y: i32, font_size: i32, color: rl.Color) void {
         rl.drawText(text, self.x + rel_x, self.y + rel_y, font_size, color);
     }
 
     /// Draw text at a line number (for vertical list of items)
-    pub fn drawTextLine(self: ContentArea, text: [*:0]const u8, line: i32, font_size: i32, color: rl.Color) void {
+    pub fn drawTextLine(self: ContentArea, text: [:0]const u8, line: i32, font_size: i32, color: rl.Color) void {
         const line_height = font_size + 2;
         rl.drawText(text, self.x, self.y + (line * line_height), font_size, color);
     }

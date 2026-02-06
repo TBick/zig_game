@@ -2,7 +2,12 @@ const std = @import("std");
 const rl = @import("raylib");
 const HexGrid = @import("world/hex_grid.zig").HexGrid;
 const HexRenderer = @import("rendering/hex_renderer.zig").HexRenderer;
-const DebugOverlay = @import("ui/debug_overlay.zig").DebugOverlay;
+
+// Debug system imports
+const debug = @import("debug/debug.zig");
+const PerformanceWindow = @import("debug/windows/performance.zig").PerformanceWindow;
+const EntityInfoWindow = @import("debug/windows/entity_info.zig").EntityInfoWindow;
+const TileInfoWindow = @import("debug/windows/tile_info.zig").TileInfoWindow;
 
 // Entity system imports
 const Entity = @import("entities/entity.zig").Entity;
@@ -17,7 +22,6 @@ const TickScheduler = @import("core/tick_scheduler.zig").TickScheduler;
 
 // Input and UI imports
 const EntitySelector = @import("input/entity_selector.zig").EntitySelector;
-const EntityInfoPanel = @import("ui/entity_info_panel.zig").EntityInfoPanel;
 const InputHandler = @import("input/input_handler.zig").InputHandler;
 
 // Rendering coordinator
@@ -35,8 +39,17 @@ test {
     std.testing.refAllDecls(@import("input/entity_selector.zig"));
     std.testing.refAllDecls(@import("input/tile_selector.zig"));
     std.testing.refAllDecls(@import("input/input_handler.zig"));
-    std.testing.refAllDecls(@import("ui/entity_info_panel.zig"));
     std.testing.refAllDecls(@import("ui/ui_manager.zig"));
+    // Debug system modules
+    std.testing.refAllDecls(@import("debug/debug.zig"));
+    std.testing.refAllDecls(@import("debug/window.zig"));
+    std.testing.refAllDecls(@import("debug/window_manager.zig"));
+    std.testing.refAllDecls(@import("debug/state.zig"));
+    std.testing.refAllDecls(@import("debug/windows/performance.zig"));
+    std.testing.refAllDecls(@import("debug/windows/entity_info.zig"));
+    std.testing.refAllDecls(@import("debug/windows/tile_info.zig"));
+    std.testing.refAllDecls(@import("debug/overlays/coord_labels.zig"));
+    std.testing.refAllDecls(@import("debug/overlays/selection.zig"));
 }
 
 pub fn main() !void {
@@ -130,20 +143,24 @@ pub fn main() !void {
     // Initialize tick scheduler (2.5 ticks per second)
     var tick_scheduler = TickScheduler.init(2.5);
 
-    // Initialize debug overlay
-    var debug_overlay = DebugOverlay.init();
+    // Initialize debug system (all debug windows and state)
+    var debug_state = debug.State.init();
+    var perf_window = PerformanceWindow.init();
+    var entity_info_window = EntityInfoWindow.init();
+    var tile_info_window = TileInfoWindow.init();
 
     // Initialize input handler (replaces entity_selector, last_mouse_pos, and all input code)
     var input_handler = InputHandler.init(&hex_renderer.camera);
-    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
 
     // Initialize game renderer (coordinates all rendering)
     var game_renderer = GameRenderer.init(
         allocator,
         &hex_renderer,
         &entity_renderer,
-        &debug_overlay,
-        &info_panel,
+        &debug_state,
+        &perf_window,
+        &entity_info_window,
+        &tile_info_window,
     );
 
     // Main game loop
@@ -175,7 +192,7 @@ pub fn main() !void {
             &entity_manager,
             &grid,
             &hex_renderer.layout,
-            &debug_overlay,
+            &debug_state,
             current_width,
             current_height,
         );

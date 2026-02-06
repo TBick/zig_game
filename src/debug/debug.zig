@@ -68,8 +68,8 @@ const NoOpContentArea = struct {
     width: i32 = 0,
     height: i32 = 0,
 
-    pub fn drawText(_: NoOpContentArea, _: [*:0]const u8, _: i32, _: i32, _: i32, _: anytype) void {}
-    pub fn drawTextLine(_: NoOpContentArea, _: [*:0]const u8, _: i32, _: i32, _: anytype) void {}
+    pub fn drawText(_: NoOpContentArea, _: [:0]const u8, _: i32, _: i32, _: i32, _: anytype) void {}
+    pub fn drawTextLine(_: NoOpContentArea, _: [:0]const u8, _: i32, _: i32, _: anytype) void {}
 };
 
 /// No-op window manager

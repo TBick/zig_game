@@ -2,8 +2,12 @@ const std = @import("std");
 const rl = @import("raylib");
 const HexRenderer = @import("hex_renderer.zig").HexRenderer;
 const EntityRenderer = @import("entity_renderer.zig").EntityRenderer;
-const DebugOverlay = @import("../ui/debug_overlay.zig").DebugOverlay;
-const EntityInfoPanel = @import("../ui/entity_info_panel.zig").EntityInfoPanel;
+const debug = @import("../debug/debug.zig");
+const PerformanceWindow = @import("../debug/windows/performance.zig").PerformanceWindow;
+const EntityInfoWindow = @import("../debug/windows/entity_info.zig").EntityInfoWindow;
+const TileInfoWindow = @import("../debug/windows/tile_info.zig").TileInfoWindow;
+const CoordLabels = @import("../debug/overlays/coord_labels.zig").CoordLabels;
+const SelectionOverlay = @import("../debug/overlays/selection.zig").SelectionOverlay;
 const UIManager = @import("../ui/ui_manager.zig").UIManager;
 const HexGrid = @import("../world/hex_grid.zig").HexGrid;
 const HexCoord = @import("../world/hex_grid.zig").HexCoord;
@@ -20,8 +24,16 @@ pub const GameRenderer = struct {
     // References to renderers (not owned - created in main)
     hex_renderer: *HexRenderer,
     entity_renderer: *EntityRenderer,
-    debug_overlay: *DebugOverlay,
-    info_panel: *EntityInfoPanel,
+
+    // Debug system references
+    debug_state: *debug.State,
+    perf_window: *PerformanceWindow,
+    entity_info_window: *EntityInfoWindow,
+    tile_info_window: *TileInfoWindow,
+
+    // Debug overlays (stateless)
+    coord_labels: CoordLabels,
+    selection_overlay: SelectionOverlay,
 
     // Owned stateless renderer
     ui_manager: UIManager,
@@ -34,14 +46,20 @@ pub const GameRenderer = struct {
         allocator: std.mem.Allocator,
         hex_renderer: *HexRenderer,
         entity_renderer: *EntityRenderer,
-        debug_overlay: *DebugOverlay,
-        info_panel: *EntityInfoPanel,
+        debug_state: *debug.State,
+        perf_window: *PerformanceWindow,
+        entity_info_window: *EntityInfoWindow,
+        tile_info_window: *TileInfoWindow,
     ) GameRenderer {
         return GameRenderer{
             .hex_renderer = hex_renderer,
             .entity_renderer = entity_renderer,
-            .debug_overlay = debug_overlay,
-            .info_panel = info_panel,
+            .debug_state = debug_state,
+            .perf_window = perf_window,
+            .entity_info_window = entity_info_window,
+            .tile_info_window = tile_info_window,
+            .coord_labels = CoordLabels.init(),
+            .selection_overlay = SelectionOverlay.init(),
             .ui_manager = UIManager.init(),
             .allocator = allocator,
         };
@@ -81,6 +99,9 @@ pub const GameRenderer = struct {
         const hovered_tile = input_handler.getHoveredTile();
         const selected_tile = input_handler.getSelectedTile();
 
+        // Check if selection highlights should be shown (debug-only feature)
+        const show_highlights = self.debug_state.shouldShowSelectionHighlights();
+
         // Build drawable tile set from grid
         var drawable_set = DrawableTileSet.init(self.allocator);
         defer drawable_set.deinit();
@@ -93,9 +114,13 @@ pub const GameRenderer = struct {
             // Add to drawable set (ignore errors - if allocation fails, just skip this tile)
             drawable_set.add(coord) catch continue;
 
-            // Determine tile state for fill color
-            const is_selected = if (selected_tile) |sel| sel.q == coord.q and sel.r == coord.r else false;
-            const is_hovered = if (hovered_tile) |hov| hov.q == coord.q and hov.r == coord.r else false;
+            // Determine tile state for fill color (only if highlights enabled)
+            const is_selected = if (show_highlights) blk: {
+                break :blk if (selected_tile) |sel| sel.q == coord.q and sel.r == coord.r else false;
+            } else false;
+            const is_hovered = if (show_highlights) blk: {
+                break :blk if (hovered_tile) |hov| hov.q == coord.q and hov.r == coord.r else false;
+            } else false;
 
             // Get fill color based on state
             const colors = getTileColors(is_selected, is_hovered);
@@ -105,24 +130,17 @@ pub const GameRenderer = struct {
         }
 
         // Draw all edges once using optimized rendering (50% fewer draw calls)
-        // Note: This only draws the grid - selection highlighting will be added separately
         self.hex_renderer.drawOptimizedEdges(&drawable_set, screen_width, screen_height);
 
-        // DEBUG: Draw coordinates in center of each hex
-        it = grid.tiles.iterator();
-        while (it.next()) |entry| {
-            const coord = entry.key_ptr.*;
-            const pixel = self.hex_renderer.layout.hexToPixel(coord);
-            const screen_pos = self.hex_renderer.camera.worldToScreen(pixel.x, pixel.y, screen_width, screen_height);
-
-            var buf: [32:0]u8 = undefined;
-            const label = std.fmt.bufPrintZ(&buf, "{d},{d}", .{ coord.q, coord.r }) catch "??";
-
-            const text_width = rl.measureText(label, 10);
-            const text_x: i32 = @as(i32, @intFromFloat(screen_pos.x)) - @divTrunc(text_width, 2);
-            const text_y: i32 = @as(i32, @intFromFloat(screen_pos.y)) - 5;
-
-            rl.drawText(label, text_x, text_y, 10, rl.Color.white);
+        // Draw coordinate labels overlay (debug-only feature)
+        if (self.debug_state.shouldShowCoordLabels()) {
+            self.coord_labels.render(
+                grid,
+                &self.hex_renderer.layout,
+                &self.hex_renderer.camera,
+                screen_width,
+                screen_height,
+            );
         }
     }
 
@@ -134,14 +152,17 @@ pub const GameRenderer = struct {
         screen_width: i32,
         screen_height: i32,
     ) void {
-        const selected_entity = input_handler.getSelectedEntity(entity_manager);
-        const hovered_entity = input_handler.getHoveredEntity(entity_manager);
+        // Check if selection highlights should be shown (debug-only feature)
+        const show_highlights = self.debug_state.shouldShowSelectionHighlights();
+
+        const selected_entity = if (show_highlights) input_handler.getSelectedEntity(entity_manager) else null;
+        const hovered_entity = if (show_highlights) input_handler.getHoveredEntity(entity_manager) else null;
 
         for (entity_manager.getAliveEntities()) |*entity| {
             const is_selected = if (selected_entity) |sel| sel.id == entity.id else false;
             const is_hovered = if (hovered_entity) |hov| hov.id == entity.id else false;
 
-            // Show highlight ring for both hover and selection
+            // Show highlight ring for both hover and selection (only if debug highlights enabled)
             const show_highlight = is_selected or is_hovered;
 
             self.entity_renderer.drawEntityWithSelection(
@@ -165,7 +186,7 @@ pub const GameRenderer = struct {
         screen_width: i32,
         screen_height: i32,
     ) void {
-        // Render UI text (help, camera info, counts, tick)
+        // Render UI text (help, camera info, counts, tick) - always visible
         self.ui_manager.draw(
             &self.hex_renderer.camera,
             entity_manager.getAliveCount(),
@@ -176,12 +197,25 @@ pub const GameRenderer = struct {
             screen_height,
         );
 
-        // Render debug overlay (toggleable with F3)
-        self.debug_overlay.draw(entity_manager.getAliveCount(), @floatCast(tick_scheduler.getTickRate()));
+        // Only render debug windows if debug is enabled
+        if (self.debug_state.isEnabled()) {
+            // Update and render performance window
+            self.perf_window.update();
+            self.perf_window.setEntityCount(entity_manager.getAliveCount());
+            self.perf_window.setTickRate(@floatCast(tick_scheduler.getTickRate()));
+            self.perf_window.render();
 
-        // Render entity info panel (bottom-left)
-        const selected_entity = input_handler.getSelectedEntity(entity_manager);
-        self.info_panel.draw(selected_entity, tick_scheduler.getCurrentTick());
+            // Update and render entity info window
+            const selected_entity = input_handler.getSelectedEntity(entity_manager);
+            self.entity_info_window.setEntity(selected_entity);
+            self.entity_info_window.setTick(tick_scheduler.getCurrentTick());
+            self.entity_info_window.render();
+
+            // Update and render tile info window
+            const selected_tile = input_handler.getSelectedTile();
+            self.tile_info_window.setTile(selected_tile);
+            self.tile_info_window.render();
+        }
     }
 };
 
@@ -215,15 +249,19 @@ test "GameRenderer.init creates valid instance" {
     // Create mock renderers (just for structure, no actual rendering)
     var hex_renderer = HexRenderer.init(30.0);
     var entity_renderer = EntityRenderer.init(12.0);
-    var debug_overlay = DebugOverlay.init();
-    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
+    var debug_state = debug.State.init();
+    var perf_window = PerformanceWindow.init();
+    var entity_info_window = EntityInfoWindow.init();
+    var tile_info_window = TileInfoWindow.init();
 
     const game_renderer = GameRenderer.init(
         std.testing.allocator,
         &hex_renderer,
         &entity_renderer,
-        &debug_overlay,
-        &info_panel,
+        &debug_state,
+        &perf_window,
+        &entity_info_window,
+        &tile_info_window,
     );
 
     // Verify references are stored correctly
@@ -234,15 +272,19 @@ test "GameRenderer.init creates valid instance" {
 test "GameRenderer stores references not ownership" {
     var hex_renderer = HexRenderer.init(30.0);
     var entity_renderer = EntityRenderer.init(12.0);
-    var debug_overlay = DebugOverlay.init();
-    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
+    var debug_state = debug.State.init();
+    var perf_window = PerformanceWindow.init();
+    var entity_info_window = EntityInfoWindow.init();
+    var tile_info_window = TileInfoWindow.init();
 
     const game_renderer = GameRenderer.init(
         std.testing.allocator,
         &hex_renderer,
         &entity_renderer,
-        &debug_overlay,
-        &info_panel,
+        &debug_state,
+        &perf_window,
+        &entity_info_window,
+        &tile_info_window,
     );
 
     // Verify we can still access original renderers
@@ -307,15 +349,19 @@ test "GameRenderer has allocator for DrawableTileSet creation" {
     // Verify GameRenderer stores allocator for drawable set creation
     var hex_renderer = HexRenderer.init(30.0);
     var entity_renderer = EntityRenderer.init(12.0);
-    var debug_overlay = DebugOverlay.init();
-    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
+    var debug_state = debug.State.init();
+    var perf_window = PerformanceWindow.init();
+    var entity_info_window = EntityInfoWindow.init();
+    var tile_info_window = TileInfoWindow.init();
 
     const game_renderer = GameRenderer.init(
         std.testing.allocator,
         &hex_renderer,
         &entity_renderer,
-        &debug_overlay,
-        &info_panel,
+        &debug_state,
+        &perf_window,
+        &entity_info_window,
+        &tile_info_window,
     );
 
     // Verify allocator is stored (integration setup correct)
@@ -327,15 +373,19 @@ test "DrawableTileSet can be created with GameRenderer allocator" {
     // Test that we can create a DrawableTileSet with the renderer's allocator
     var hex_renderer = HexRenderer.init(30.0);
     var entity_renderer = EntityRenderer.init(12.0);
-    var debug_overlay = DebugOverlay.init();
-    var info_panel = EntityInfoPanel.init(10, 250, 250, 200);
+    var debug_state = debug.State.init();
+    var perf_window = PerformanceWindow.init();
+    var entity_info_window = EntityInfoWindow.init();
+    var tile_info_window = TileInfoWindow.init();
 
     const game_renderer = GameRenderer.init(
         std.testing.allocator,
         &hex_renderer,
         &entity_renderer,
-        &debug_overlay,
-        &info_panel,
+        &debug_state,
+        &perf_window,
+        &entity_info_window,
+        &tile_info_window,
     );
 
     // Simulate what renderTiles does: create drawable set
