@@ -336,9 +336,9 @@ Step 4 - Migrate Debug Code:
 [x] Committed (934c60e)
 
 Step 5 - Create Overlays:
-[ ] coord_labels.zig created
-[ ] selection.zig created
-[ ] Documentation updated
+[x] coord_labels.zig created (1 test)
+[x] selection.zig created (3 tests)
+[x] Documentation updated
 [ ] Committed
 
 Step 6 - Integration:
