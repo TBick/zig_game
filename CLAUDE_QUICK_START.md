@@ -98,14 +98,18 @@ zig_game/
 │   ├── design/                   # Design specifications
 │   └── agent-framework/          # Agent templates
 │
-├── src/                          # ~4,500 lines of Zig code
+├── src/                          # ~5,000 lines of Zig code
 │   ├── main.zig                  # Entry point
 │   ├── core/                     # Tick scheduler, action queue
 │   ├── world/                    # Hex grid (✅ complete)
 │   ├── entities/                 # Entity system (✅ complete)
 │   ├── rendering/                # Raylib rendering (✅ complete)
 │   ├── input/                    # Entity selection (✅ complete)
-│   ├── ui/                       # Debug overlay (✅ complete)
+│   ├── ui/                       # UI manager (✅ complete)
+│   ├── debug/                    # Debug system (✅ Session 12)
+│   │   ├── debug.zig             # Compile-time switches
+│   │   ├── windows/              # Debug windows
+│   │   └── overlays/             # Debug overlays
 │   ├── scripting/                # Lua integration (✅ complete)
 │   ├── resources/                # Phase 3
 │   └── structures/               # Phase 3
@@ -321,6 +325,6 @@ For ANY implementation work:
 
 ---
 
-**Quick Start Version**: 1.3 (Phase 2 complete)
-**Last Updated**: 2026-02-05 (Session 11 - Phase 2 validation & polish)
+**Quick Start Version**: 1.4 (Debug system refactor)
+**Last Updated**: 2026-02-05 (Session 12 - Debug system refactor)
 **For detailed reference**: See CLAUDE_REFERENCE.md

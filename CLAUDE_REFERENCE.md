@@ -143,7 +143,7 @@ zig_game/
 │           ├── feature_agent_template.md
 │           └── test_agent_template.md
 │
-├── src/                          # Zig source code (~3,370 lines)
+├── src/                          # Zig source code (~5,000 lines)
 │   ├── main.zig                  # Entry point (game loop)
 │   ├── core/                     # Core systems
 │   │   └── tick_scheduler.zig    # ✅ Tick timing (2.5 ticks/sec)
@@ -158,8 +158,18 @@ zig_game/
 │   ├── input/                    # Input handling
 │   │   └── entity_selector.zig   # ✅ Mouse-based selection
 │   ├── ui/                       # User interface
-│   │   ├── debug_overlay.zig     # ✅ F3 debug info
-│   │   └── entity_info_panel.zig # ✅ Entity inspection panel
+│   │   └── ui_manager.zig        # ✅ UI text rendering
+│   ├── debug/                    # Debug system (✅ Session 12)
+│   │   ├── debug.zig             # Compile-time switches
+│   │   ├── window.zig            # Window abstraction
+│   │   ├── state.zig             # Debug state (F3 toggle)
+│   │   ├── windows/              # Debug windows
+│   │   │   ├── performance.zig   # FPS, frame time
+│   │   │   ├── entity_info.zig   # Entity details
+│   │   │   └── tile_info.zig     # Tile details
+│   │   └── overlays/             # Debug overlays
+│   │       ├── coord_labels.zig  # Hex coordinate text
+│   │       └── selection.zig     # Hover/selection highlights
 │   ├── scripting/                # Lua integration (✅ Phase 2 COMPLETE)
 │   │   ├── lua_c.zig             # ✅ Raw C API bindings (~220 lines)
 │   │   ├── lua_vm.zig            # ✅ Zig wrapper (~170 lines, 5 tests)
@@ -172,14 +182,14 @@ zig_game/
 ├── vendor/                       # Vendored dependencies
 │   └── lua-5.4.8/                # Complete Lua 5.4.8 source (34 C files)
 │
-├── tests/                        # Test files (109 passing tests)
+├── tests/                        # Test files (207 passing tests)
 ├── scripts/                      # Example Lua scripts for players (Phase 2+)
 ├── assets/                       # Sprites, textures, etc. (Phase 4+)
 ├── build.zig                     # Build configuration (fully functional)
 └── build.zig.zon                 # Dependencies (Raylib)
 ```
 
-**Current State**: Phase 1 Complete (100%), Phase 2 Complete (100%). 207 tests passing, ready for Phase 3.
+**Current State**: Phase 1 Complete (100%), Phase 2 Complete (100%), Debug System Complete (Session 12). 207 tests passing, ready for Phase 3.
 
 ---
 
